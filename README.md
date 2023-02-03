@@ -18,7 +18,8 @@ and put them(\*.txt files) in
 - Restart: `Esc`
 
 # Known issues:
-- The game will crash after several manual level selection due to OOM (decompression is very memory hungry and for some reason the memory decompression uses won't be freed up by gc? idk). To alleviate the problem, Try increasing the heap size and stack size.
+- The game will crash after several manual level selection due to OOM (decompression is very memory hungry and for some reason the memory decompression uses won't be freed by gc? idk). To alleviate the problem, Try increasing the heap size and stack size.
+- images won't scale down properly.
 
 # Credits:
 - Patrick Traynor for [Patrick's Parabox](https://store.steampowered.com/app/1260520/Patricks_Parabox/)
