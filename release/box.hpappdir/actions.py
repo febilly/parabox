@@ -1,0 +1,7 @@
+UP = 1
+LEFT = 2
+DOWN = 3
+RIGHT = 4
+UNDO = 5
+RESTART = 6
+ENTER = 7
