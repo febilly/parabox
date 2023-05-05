@@ -296,18 +296,18 @@ class Level:
     def play(self):
         self.render(1)
         while True:
-            direction = get_input()
-            if direction == actions.UP:
+            action = get_input()
+            if action == actions.UP:
                 self.player.pushed(directions.UP, self.undo_record)
-            elif direction == actions.LEFT:
+            elif action == actions.LEFT:
                 self.player.pushed(directions.LEFT, self.undo_record)
-            elif direction == actions.DOWN:
+            elif action == actions.DOWN:
                 self.player.pushed(directions.DOWN, self.undo_record)
-            elif direction == actions.RIGHT:
+            elif action == actions.RIGHT:
                 self.player.pushed(directions.RIGHT, self.undo_record)
-            elif direction == actions.UNDO:
+            elif action == actions.UNDO:
                 self.undo_record.undo()
-            elif direction == actions.RESTART:
+            elif action == actions.RESTART:
                 self.undo_record.append(UndoRecord.Record.record_all(self.references))
                 self.init_state.undo()
 
