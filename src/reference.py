@@ -264,7 +264,7 @@ class Reference:
         # eat
         tracker.move_enter(self.MoveRecord(enterer, self.room, enter_pos, self.is_flipped_current))
         self.pressed_direction = new_direction
-        if enter_obj._eaten_by(enterer, new_direction, tracker):  # FIXME: the enterer is not flipped yet, fix this!!!
+        if enter_obj._eaten_by(enterer, new_direction, tracker):
             if enterer_flipped:
                 enterer.is_flipped_current ^= True
             return True
