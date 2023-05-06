@@ -10,7 +10,7 @@ class Reference:
     player is a reference, too
     """
 
-    def __init__(self, id, exit_block=True, is_player=False):
+    def __init__(self, id, exit_block=True, is_player=False, is_flipped=False):
         self.id = id
         self.exit_block = exit_block
         self.is_player = is_player
@@ -19,8 +19,8 @@ class Reference:
         self.pos: tuple[int, int] = (-1, -1)
         self.queried_poses: list[tuple[tuple[int, int], int]] = []  # (pos, direction)
         self.pressed_direction = None
-        self.is_flipped_original = False  # whether this reference should have the "flipped" animation
-        self.is_flipped_current = False  # whether this reference is flipped relative to its parent room
+        self.is_flipped_original = is_flipped  # whether this reference should have the "flipped" animation
+        self.is_flipped_current = is_flipped  # whether this reference is flipped relative to its parent room
         pass
 
     def _get_next_pos(self, direction: int, tested: list["Reference"], can_exit, offset=0.5, is_flipped=False):
@@ -264,7 +264,7 @@ class Reference:
         # eat
         tracker.move_enter(self.MoveRecord(enterer, self.room, enter_pos, self.is_flipped_current))
         self.pressed_direction = new_direction
-        if enter_obj._eaten_by(enterer, new_direction, tracker):
+        if enter_obj._eaten_by(enterer, new_direction, tracker):  # FIXME: the enterer is not flipped yet, fix this!!!
             if enterer_flipped:
                 enterer.is_flipped_current ^= True
             return True

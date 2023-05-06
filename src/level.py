@@ -110,6 +110,7 @@ class Level:
             
             fillwithwalls = (args[10] == "1")
             player = (args[11] == "1")
+            fliph = (args[14] == "1")
             floatinspace = (args[15] == "1")
 
             if id in self.rooms:
@@ -118,12 +119,10 @@ class Level:
                 self.possessable_count += 1
                 if self.possessable_count > 1:
                     raise NotImplementedError("More than one possessable block in the level, not supported")
-            if (args[14] == "1"):
-                    raise NotImplementedError("flipped blocks are not supported")
             
             room = Room(width, height, id, (hue, sat, val), fillwithwalls)
             if not floatinspace:
-                reference = Reference(id, True, player)
+                reference = Reference(id, True, player, fliph)
                 if player:
                     self.player = reference
                 reference.pos = (x, y)
@@ -146,8 +145,9 @@ class Level:
             y = int(args[2])
             id = int(args[3])
             exitblock = (args[4] == "1")
-            floatinspace = (args[14] == "1")
             player = (args[10] == "1")
+            fliph = (args[13] == "1")
+            floatinspace = (args[14] == "1")
 
             if (args[5] == "1" or args[6] == "1" or args[7] == "1" or args[8] == "1"):
                 raise NotImplementedError("infinity blocks are not supported")
@@ -155,11 +155,9 @@ class Level:
                 self.possessable_count += 1
                 if self.possessable_count > 1:
                     raise NotImplementedError("More than one possessable block in the level, not supported")
-            if (args[13] == "1"):
-                    raise NotImplementedError("flipped blocks are not supported")
 
             if not floatinspace:
-                reference = Reference(id, exitblock, player)
+                reference = Reference(id, exitblock, player, fliph)
                 if player:
                     self.player = reference
                 reference.pos = (x, y)
