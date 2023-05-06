@@ -5,10 +5,11 @@ MAX_ENTRIES = 1000
 class UndoRecord:
     class Movement:
         # def __init__(self, reference: reference.Reference, parent_room, pos: tuple[int, int]):
-        def __init__(self, reference, parent_room, pos: tuple[int, int]):
+        def __init__(self, reference, parent_room, pos: tuple[int, int], is_flipped: bool):
             self.reference = reference
             self.parent_room = parent_room
             self.pos = pos
+            self.is_flipped = is_flipped
 
     class Record:
         def __init__(self):
@@ -22,7 +23,7 @@ class UndoRecord:
         def from_move_records(cls, move_records):
             record = cls()
             for move_record in move_records:
-                record.append(UndoRecord.Movement(move_record.reference,move_record.reference.parent_room, move_record.reference.pos))
+                record.append(UndoRecord.Movement(move_record.reference, move_record.reference.parent_room, move_record.reference.pos, move_record.reference.is_flipped_current))
             return record
 
         @classmethod
@@ -31,7 +32,7 @@ class UndoRecord:
             record = cls()
             for reference_list in references.values():
                 for reference in reference_list:
-                    record.append(UndoRecord.Movement(reference, reference.parent_room, reference.pos))
+                    record.append(UndoRecord.Movement(reference, reference.parent_room, reference.pos, reference.is_flipped_current))
             return record
 
         def undo(self):
@@ -49,6 +50,7 @@ class UndoRecord:
                 movement.reference.pos = new_pos
                 new_map = reference.parent_room.reference_map
                 new_map[new_pos[0]][new_pos[1]] = reference
+                reference.is_flipped_current = movement.is_flipped
 
 
     def __init__(self):

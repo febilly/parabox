@@ -106,7 +106,7 @@ def load_levels_from_chapter() -> list[Level]:
     return levels
 
 def hub():
-    options = ["Play a Chapter", "Select a Level"]
+    options = ["Play Chapters", "Select levels"]
     choice = long_select("Select an option", options)
     if choice == 0:
         levels = load_levels_from_chapter()
