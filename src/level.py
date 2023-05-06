@@ -12,7 +12,7 @@ import utils
 from palettes import Palettes
 
 class Level:
-    def __init__(self, string, palette_index=-1):
+    def __init__(self, string: str, palette_index=-1):
         self.rooms: dict[int, Room] = {}
         self.references: dict[int, list[Reference]] = {}
         self.graphic_mapping: dict[int, int] = {}

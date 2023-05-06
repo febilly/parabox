@@ -21,18 +21,39 @@ hub()
 # for level in levels:
 #     level.play()
 
+level = """
+"""
+
 # level = Level(level)
 # player = level.player
 # from undo_record import UndoRecord
 # level.undo_record.append(UndoRecord.Record.record_all(level.references))
 # level.init_state.undo()
+# player.pushed(directions.LEFT, level.undo_record)
 # player.pushed(directions.UP, level.undo_record)
 # player.pushed(directions.UP, level.undo_record)
+# player.pushed(directions.UP, level.undo_record)
+# player.pushed(directions.RIGHT, level.undo_record)
+# player.pushed(directions.DOWN, level.undo_record)
 # player.pushed(directions.LEFT, level.undo_record)
 # player.pushed(directions.DOWN, level.undo_record)
+# player.pushed(directions.RIGHT, level.undo_record)
+# player.pushed(directions.RIGHT, level.undo_record)
+# player.pushed(directions.RIGHT, level.undo_record)
 # player.pushed(directions.DOWN, level.undo_record)
+# player.pushed(directions.RIGHT, level.undo_record)
+# player.pushed(directions.UP, level.undo_record)
+# player.pushed(directions.RIGHT, level.undo_record)
+# player.pushed(directions.UP, level.undo_record)
+# player.pushed(directions.LEFT, level.undo_record)
+# player.pushed(directions.LEFT, level.undo_record)
+# player.pushed(directions.RIGHT, level.undo_record)
 # player.pushed(directions.DOWN, level.undo_record)
-# player.pushed(directions.DOWN, level.undo_record)
+# player.pushed(directions.RIGHT, level.undo_record)
+# player.pushed(directions.UP, level.undo_record)
+# player.pushed(directions.RIGHT, level.undo_record)
+# player.pushed(directions.UP, level.undo_record)
+# player.pushed(directions.LEFT, level.undo_record)
 
 
 

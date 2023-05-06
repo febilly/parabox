@@ -58,7 +58,7 @@ class Reference:
                 else:
                     new_direction = directions.reverse(direction)
 
-            return self.parent_room.reference._get_next_pos(new_direction, tested, can_exit, new_offset, is_flipped ^ self.is_flipped_current)
+            return self.parent_room.reference._get_next_pos(new_direction, tested, can_exit, new_offset, is_flipped ^ self.parent_room.reference.is_flipped_current)
 
     def get_next_pos(self, direction: int, can_exit=True):
         """
@@ -161,29 +161,31 @@ class Reference:
 
         else:
             # recurse start here
-
+            # prepare
             # check if the next object is pushable or enterable
             if not isinstance(next_obj, Reference):
                 raise TypeError("next_obj is not a Reference")
             if not isinstance(next_pos, tuple):
                 raise TypeError("next_pos is a {}, not a tuple".format(type(next_pos)))
 
+            new_direction = directions.reverse(direction) if next_pos[3] else direction
+
             # push
             tracker.move_push(self.MoveRecord(self, next_pos[0], next_pos[1], next_pos[3]))
             self.pressed_direction = direction
-            if next_obj._pushed(direction, tracker):
+            if next_obj._pushed(new_direction, tracker):
                 return True
             tracker.pop_last()
             self.pressed_direction = None
 
             # enter
-            if next_obj._entered_by(self, direction, tracker, next_pos[2]):
+            if next_obj._entered_by(self, new_direction, tracker, next_pos[2]):
                 return True
 
             # eat
             tracker.move_push(self.MoveRecord(self, next_pos[0], next_pos[1], next_pos[3]))
             self.pressed_direction = direction
-            if next_obj._eaten_by(self, direction, tracker):
+            if next_obj._eaten_by(self, new_direction, tracker):
                 return True
             tracker.pop_last()
             self.pressed_direction = None
@@ -230,7 +232,7 @@ class Reference:
             enterer.is_flipped_current ^= True
         enterer_flipped = self.is_flipped_current
 
-        tracker.move_enter(self.MoveRecord(self, self.parent_room, self.pos, self.is_flipped_current))
+        tracker.move_enter(self.MoveRecord(self, self.parent_room, self.pos, False))  # I forgot why I wrote this, but let's keep it for now
         self.pressed_direction = direction
 
         if directions.is_vertical(direction):
