@@ -292,6 +292,7 @@ class Level:
         return True
 
     def play(self):
+        base_room = self.player.parent_room
         self.render(1)
         while True:
             action = get_input()
@@ -310,6 +311,7 @@ class Level:
                 self.init_state.undo()
 
             self.render(1)
+            # self.render(1, base_room)
 
             if self.is_completed():
                 hpprime.eval("TEXTOUT_P(\"You win!\", G0, 0, 0, 7, #FFFF00h, 200, 0)")

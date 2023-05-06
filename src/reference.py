@@ -168,7 +168,7 @@ class Reference:
             if not isinstance(next_pos, tuple):
                 raise TypeError("next_pos is a {}, not a tuple".format(type(next_pos)))
 
-            new_direction = directions.reverse(direction) if next_pos[3] else direction
+            new_direction = directions.reverse(direction) if next_pos[3] and directions.is_horizontal(direction) else direction
 
             # push
             tracker.move_push(self.MoveRecord(self, next_pos[0], next_pos[1], next_pos[3]))
@@ -179,7 +179,7 @@ class Reference:
             self.pressed_direction = None
 
             # enter
-            if next_obj._entered_by(self, new_direction, tracker, next_pos[2]):
+            if next_obj._entered_by(self, new_direction, tracker, next_pos[2], next_pos[3]):
                 return True
 
             # eat
@@ -204,7 +204,7 @@ class Reference:
             record.reference.pressed_direction = None
         return result
 
-    def _entered_by(self, enterer: "Reference", direction: int, tracker: MoveTracker, offset=0.5):
+    def _entered_by(self, enterer: "Reference", direction: int, tracker: MoveTracker, offset=0.5, enterer_already_should_flip=False):
         """
         check if other objects can enter "self" object in the given direction
         (direction is where the "other object" want to go)
@@ -218,7 +218,7 @@ class Reference:
         enter_pos = directions.enter_pos(direction, self.room.width, self.room.height, self.is_flipped_current, offset)
         enter_obj = self.room.get(enter_pos)
         if enter_obj == object_types.GROUND:
-            tracker.move_enter(self.MoveRecord(enterer, self.room, enter_pos, self.is_flipped_current))
+            tracker.move_enter(self.MoveRecord(enterer, self.room, enter_pos, enterer_already_should_flip ^ self.is_flipped_current))
             return True
         if enter_obj == object_types.WALL:
             return False
@@ -248,7 +248,7 @@ class Reference:
                 new_direction = directions.reverse(direction)
 
         # push
-        tracker.move_enter(self.MoveRecord(enterer, self.room, enter_pos, self.is_flipped_current))
+        tracker.move_enter(self.MoveRecord(enterer, self.room, enter_pos, enterer_already_should_flip ^ self.is_flipped_current))
         enterer.pressed_direction = new_direction
         if enter_obj._pushed(new_direction, tracker):
             if enterer_flipped:
@@ -258,13 +258,13 @@ class Reference:
         enterer.pressed_direction = None
 
         # enter
-        if enter_obj._entered_by(enterer, new_direction, tracker, new_offset):
+        if enter_obj._entered_by(enterer, new_direction, tracker, new_offset, enterer_already_should_flip ^ self.is_flipped_current):
             if enterer_flipped:
                 enterer.is_flipped_current ^= True
             return True
 
         # eat
-        tracker.move_enter(self.MoveRecord(enterer, self.room, enter_pos, self.is_flipped_current))
+        tracker.move_enter(self.MoveRecord(enterer, self.room, enter_pos, enterer_already_should_flip ^ self.is_flipped_current))
         self.pressed_direction = new_direction
         if enter_obj._eaten_by(enterer, new_direction, tracker):
             if enterer_flipped:
@@ -335,7 +335,7 @@ class Reference:
             if self_flipped:
                 self.is_flipped_current ^= True
             return True
-        elif eater_enter_obj._entered_by(self, new_reversed_direction, tracker):
+        elif eater_enter_obj._entered_by(self, new_reversed_direction, tracker, eater.is_flipped_current):
             if self_flipped:
                 self.is_flipped_current ^= True
             return True
