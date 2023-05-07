@@ -34,7 +34,7 @@ class Room:
                              area[0][1] + (y + 1) * size[1] // self.height - 1)
         return new_pos_left_bottom, new_pos_right_top
 
-    def render(self, virtual_graphic: VirtualGraphic, area: tuple[tuple[int, int], tuple[int, int]]):
+    def render(self, virtual_graphic: VirtualGraphic, area: tuple[tuple[int, int], tuple[int, int]], render_as_flipped: bool=False):
         """
         area: (left_bottom, right_top), both are (x, y)
         """
@@ -77,18 +77,24 @@ class Room:
             virtual_graphic.draw_filled_box_area(area, utils.Color.hsv_to_rgb_int(*ground_color), 0)
             for x in range(self.width):
                 for y in range(self.height):
+                    render_x = self.width - x - 1 if render_as_flipped else x
+                    render_y = y
+
                     if self.wall_map[x][y]:
-                        virtual_graphic.draw_filled_box_area(self.sub_area(area, x, self.height - y - 1), wall_color_int)
+                        virtual_graphic.draw_filled_box_area(self.sub_area(area, render_x, self.height - render_y - 1), wall_color_int)
                     elif self.reference_map[x][y] is not None:
-                        inner_room = self.reference_map[x][y].room
-                        inner_area = self.sub_area(area, x, self.height - y - 1)
-                        inner_room.render(virtual_graphic, inner_area)
+                        inner_reference = self.reference_map[x][y]
+                        inner_room = inner_reference.room
+                        inner_area = self.sub_area(area, render_x, self.height - render_y - 1)
+                        inner_room.render(virtual_graphic, inner_area, render_as_flipped ^ inner_reference.is_flipped)
                         virtual_graphic.draw_empty_box_area(inner_area, 0)
                         if not self.reference_map[x][y].exit_block:
                             virtual_graphic.draw_filled_box_area(inner_area, 0x80ffffff, 0)
 
             for button in self.buttons:
-                inner_area = self.sub_area(area, button.pos[0], self.height - button.pos[1] - 1)
+                render_x = self.width - button.pos[0] - 1 if render_as_flipped else button.pos[0]
+                render_y = button.pos[1]
+                inner_area = self.sub_area(area, render_x, self.height - render_y - 1)
                 button.render(inner_area, virtual_graphic, self.reference_map)
 
             virtual_graphic.draw_empty_box_area(area, 0)
