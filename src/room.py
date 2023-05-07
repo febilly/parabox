@@ -24,6 +24,9 @@ class Room:
         self.buttons: list[button.Button] = []
 
     def sub_area(self, area, x, y):
+        """
+        return the area of the sub room at (x, y)
+        """
         size = area[1][0] - area[0][0] + 1, area[1][1] - area[0][1] + 1
         new_pos_left_bottom = (area[0][0] + x * size[0] // self.width,
                                area[0][1] + y * size[1] // self.height)
