@@ -34,8 +34,7 @@ class Room:
                              area[0][1] + (y + 1) * size[1] // self.height - 1)
         return new_pos_left_bottom, new_pos_right_top
 
-    def render(self, virtual_graphic: VirtualGraphic, area: tuple[tuple[int, int], tuple[int, int]],
-               rooms: dict[int, "Room"]):
+    def render(self, virtual_graphic: VirtualGraphic, area: tuple[tuple[int, int], tuple[int, int]]):
         """
         area: (left_bottom, right_top), both are (x, y)
         """
@@ -83,7 +82,7 @@ class Room:
                     elif self.reference_map[x][y] is not None:
                         inner_room = self.reference_map[x][y].room
                         inner_area = self.sub_area(area, x, self.height - y - 1)
-                        inner_room.render(virtual_graphic, inner_area, rooms)
+                        inner_room.render(virtual_graphic, inner_area)
                         virtual_graphic.draw_empty_box_area(inner_area, 0)
                         if not self.reference_map[x][y].exit_block:
                             virtual_graphic.draw_filled_box_area(inner_area, 0x80ffffff, 0)
