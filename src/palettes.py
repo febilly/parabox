@@ -37,7 +37,7 @@ SPECIAL_COLOR_INTS: dict[str, int] = {
 @singleton
 class Palettes:
     """
-    read the tiles in the app folder and store them in a canvas
+    read the palettes.txt in the app folder
     we should call init() once on the start of the app
     """
     def __init__(self):
