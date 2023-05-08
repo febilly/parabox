@@ -128,12 +128,13 @@ class Reference:
                 old_map[old_pos[0]][old_pos[1]] = None
 
             # add reference to new place
+            if not (reference.is_player and reference.parent_room == record.new_parent_room):
+                reference.is_flipped ^= record.is_flipped
             reference.parent_room = record.new_parent_room
             new_pos = record.new_pos
-            record.reference.pos = new_pos
+            reference.pos = new_pos
             new_map = reference.parent_room.reference_map
             new_map[new_pos[0]][new_pos[1]] = reference
-            reference.is_flipped ^= record.is_flipped
 
     def _pushed(self, direction: int, tracker: MoveTracker):
         """
