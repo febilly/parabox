@@ -279,7 +279,7 @@ class Level:
         hpprime.dimgrob(base_graphic, 320, 240, background_color)
         render_pos = ((320 - size[0]) // 2, (240 - size[1]) // 2)
         virtual_graphic = VirtualGraphic(base_graphic, render_pos[0], render_pos[1], size[0], size[1])
-        room.render(virtual_graphic, ((0, 0), (size[0] - 1, size[1] - 1)), self.player.is_flipped)  # TODO: properly detect whether we should flip this room
+        room.render(virtual_graphic, ((0, 0), (size[0] - 1, size[1] - 1)), self.player.is_flipped)
         hpprime.blit(0, 0, 0, base_graphic)
 
     def is_completed(self):
