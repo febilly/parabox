@@ -83,6 +83,10 @@ class Reference:
             self.new_pos = new_pos
             self.is_flipped = is_flipped
 
+        def __eq__(self, other):
+            return (self.reference == other.reference and self.new_parent_room == other.new_parent_room and
+                    self.new_pos == other.new_pos and self.is_flipped == other.is_flipped)
+
     class MoveTracker:
         PUSH = 1
         ENTER = 2
