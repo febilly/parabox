@@ -84,8 +84,7 @@ class Reference:
             self.is_flipped = is_flipped
 
         def __eq__(self, other):
-            return (self.reference == other.reference and self.new_parent_room == other.new_parent_room and
-                    self.new_pos == other.new_pos and self.is_flipped == other.is_flipped)
+            return self.reference == other.reference  # TODO: check this
 
     class MoveTracker:
         PUSH = 1
@@ -115,15 +114,15 @@ class Reference:
     def conduct_record(self, records: list["Reference.MoveRecord"], undo: undo_record.UndoRecord):
         # find
         if records.count(records[-1]) < 2:
-            head_index = 0
+            records_to_conduct = records
         else:
-            head_index = records.index(records[-1])
+            records_to_conduct = records[records.index(records[-1]):-1]
 
         # record the original state
-        undo.append(undo_record.UndoRecord.Record.from_move_records(records[head_index:]))
+        undo.append(undo_record.UndoRecord.Record.from_move_records(records_to_conduct))
 
         # conduct
-        for record in records[head_index:]:
+        for record in records_to_conduct:
             reference = record.reference
             # remove reference from old place
             old_pos = reference.pos
@@ -226,7 +225,22 @@ class Reference:
             return True
         if enter_obj == object_types.WALL:
             return False
-        if enter_obj.pressed_direction is not None:
+
+        # this is part of the preparation for the recursion
+        # we move this part here because we need the new_direction to decide whether we need to early return
+        if directions.is_vertical(direction):
+            new_offset = offset * self.room.width - enter_obj.pos[0]
+        else:
+            new_offset = offset * self.room.height - enter_obj.pos[1]
+        new_direction = direction
+        if self.is_flipped:
+            if directions.is_vertical(direction):
+                new_offset = 1 - new_offset
+            else:
+                new_direction = directions.reverse(direction)
+
+        # this is the "early return" said above
+        if enter_obj.pressed_direction is not None and enter_obj.pressed_direction != new_direction:
             # refer to eat.txt
             return False
 
@@ -236,20 +250,8 @@ class Reference:
             enterer.is_flipped ^= True
         enterer_flipped = self.is_flipped
 
-        tracker.move_enter(self.MoveRecord(self, self.parent_room, self.pos, False))  # I forgot why I wrote this, but let's keep it for now
+        tracker.move_enter(self.MoveRecord(self, self.parent_room, self.pos, False))  # we record this so that when we are wiping pressed_direction, we know we need to wipe it for "self" too
         self.pressed_direction = direction
-
-        if directions.is_vertical(direction):
-            new_offset = offset * self.room.width - enter_obj.pos[0]
-        else:
-            new_offset = offset * self.room.height - enter_obj.pos[1]
-
-        new_direction = direction
-        if self.is_flipped:
-            if directions.is_vertical(direction):
-                new_offset = 1 - new_offset
-            else:
-                new_direction = directions.reverse(direction)
 
         # push
         tracker.move_enter(self.MoveRecord(enterer, self.room, enter_pos, enterer_already_should_flip ^ self.is_flipped))
