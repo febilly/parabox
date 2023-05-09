@@ -30,20 +30,14 @@ class Room:
         size = area[1][0] - area[0][0] + 1, area[1][1] - area[0][1] + 1
         new_pos_left_bottom = (area[0][0] + x * size[0] // self.width,
                                area[0][1] + y * size[1] // self.height)
-        new_pos_right_top = (area[0][0] + (x + 1) * size[0] // self.width - 1,
-                             area[0][1] + (y + 1) * size[1] // self.height - 1)
+        new_pos_right_top = (area[0][0] + max((x + 1) * size[0] // self.width - 1, 0),
+                             area[0][1] + max((y + 1) * size[1] // self.height - 1, 0))
         return new_pos_left_bottom, new_pos_right_top
 
     def render(self, virtual_graphic: VirtualGraphic, area: tuple[tuple[int, int], tuple[int, int]], render_as_flipped: bool=False):
         """
         area: (left_bottom, right_top), both are (x, y)
         """
-        size = area[1][0] - area[0][0] + 1, area[1][1] - area[0][1] + 1
-        if size[0] <= 0 or size[1] <= 0:
-            return
-        elif size[0] <= 5 or size[1] <= 5:
-            ground_color = self.color[:2] + (self.color[2] * 0.45,)
-            virtual_graphic.draw_filled_box_area(area, utils.Color.hsv_to_rgb_int(*ground_color), 0)
         # print("rendering room {}, render size: {} x {}".format(self.id, size[0], size[1]))
 
         def is_surrounded():
@@ -67,6 +61,14 @@ class Room:
             if self.static_is_surrounded is None:
                 self.static_is_surrounded = is_surrounded()
             return self.static_is_surrounded
+
+        size = area[1][0] - area[0][0] + 1, area[1][1] - area[0][1] + 1
+        if size[0] <= 0 or size[1] <= 0:
+            return
+        elif size[0] <= 5 or size[1] <= 5:
+            ground_color = self.color[:2] + (self.color[2] * (0.45 + 0.55 * is_surrounded_by_wall()),)
+            virtual_graphic.draw_filled_box_area(area, utils.Color.hsv_to_rgb_int(*ground_color), 0)
+            return
 
         wall_color_int = utils.Color.hsv_to_rgb_int(*self.color)
 
