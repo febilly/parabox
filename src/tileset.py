@@ -41,7 +41,7 @@ class Tileset:
         index = self.tileset[name]
         hpprime.blit(canvas, x, y, self.base_canvas)
 
-    def draw_tile_size(self, name: str, canvas: int, x: int, y: int, height: int, width: int):
+    def draw_tile_size(self, name: str, canvas: int, x: int, y: int, width: int, height: int):
         if not self.inited:
             raise Exception("Tileset not inited")
         if name not in self.tileset:
