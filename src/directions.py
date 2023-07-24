@@ -3,6 +3,12 @@ LEFT = 2
 DOWN = 3
 RIGHT = 4
 
+# +y
+# ^
+# |
+# |
+# └───> +x
+
 def id_to_name(direction: int) -> str:
     if direction == UP:
         return "UP"
@@ -63,7 +69,7 @@ def next_pos(pos: tuple[int, int], direction: int) -> tuple[int, int]:
 def enter_pos(enter_direction: int, width: int, height: int, is_flipped: bool, offset = 0.5) -> tuple[int, int]:
     offset += 1e-6
     if enter_direction == UP:
-        unflipped_pos = (int(width * offset), 0)  # I think UP and DOWN are flipped
+        unflipped_pos = (int(width * offset), 0)
     elif enter_direction == LEFT:
         unflipped_pos = (width - 1, int(height * offset))
     elif enter_direction == DOWN:

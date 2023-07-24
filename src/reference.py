@@ -228,20 +228,22 @@ class Reference:
             return False
 
         # this is part of the preparation for the recursion
-        # we move this part here because we need the new_direction to decide whether we need to early return
+        # we move this part here because we need the enterer_direction to decide whether we need to early return
         if directions.is_vertical(direction):
             new_offset = offset * self.room.width - enter_obj.pos[0]
         else:
             new_offset = offset * self.room.height - enter_obj.pos[1]
-        new_direction = direction
+
+        # enterer_direction is the direction that the enterer will go after entering
         if self.is_flipped:
             if directions.is_vertical(direction):
+                enterer_direction = direction
                 new_offset = 1 - new_offset
             else:
-                new_direction = directions.reverse(direction)
+                enterer_direction = directions.reverse(direction)
 
         # this is the "early return" said above
-        if enter_obj.pressed_direction is not None and enter_obj.pressed_direction != new_direction:
+        if enter_obj.pressed_direction is not None and enter_obj.pressed_direction != enterer_direction:
             # refer to eat.txt
             return False
 
@@ -256,8 +258,8 @@ class Reference:
 
         # push
         tracker.move_enter(self.MoveRecord(enterer, self.room, enter_pos, enterer_already_should_flip ^ self.is_flipped))
-        enterer.pressed_direction = new_direction
-        if enter_obj._pushed(new_direction, tracker):
+        enterer.pressed_direction = enterer_direction
+        if enter_obj._pushed(enterer_direction, tracker):
             if enterer_flipped:
                 enterer.is_flipped ^= True
             return True
@@ -265,15 +267,15 @@ class Reference:
         enterer.pressed_direction = None
 
         # enter
-        if enter_obj._entered_by(enterer, new_direction, tracker, new_offset, enterer_already_should_flip ^ self.is_flipped):
+        if enter_obj._entered_by(enterer, enterer_direction, tracker, new_offset, enterer_already_should_flip ^ self.is_flipped):
             if enterer_flipped:
                 enterer.is_flipped ^= True
             return True
 
         # eat
         tracker.move_enter(self.MoveRecord(enterer, self.room, enter_pos, enterer_already_should_flip ^ self.is_flipped))
-        self.pressed_direction = new_direction
-        if enter_obj._eaten_by(enterer, new_direction, tracker):
+        self.pressed_direction = enterer_direction
+        if enter_obj._eaten_by(enterer, enterer_direction, tracker):
             if enterer_flipped:
                 enterer.is_flipped ^= True
             return True
@@ -329,20 +331,20 @@ class Reference:
         # recurse start here
         # prepare
         if eater.is_flipped and directions.is_horizontal(reversed_direction):
-            new_reversed_direction = directions.reverse(reversed_direction)
+            enter_obj_direction = directions.reverse(reversed_direction)
         else:
-            new_reversed_direction = reversed_direction
+            enter_obj_direction = reversed_direction
         if eater.is_flipped:
             self.is_flipped ^= True
         self_flipped = eater.is_flipped
 
         tracker.move_eat(self.MoveRecord(self, eater.room, eater_enter_pos, eater.is_flipped))
         self.pressed_direction = direction
-        if eater_enter_obj._pushed(new_reversed_direction, tracker):
+        if eater_enter_obj._pushed(enter_obj_direction, tracker):
             if self_flipped:
                 self.is_flipped ^= True
             return True
-        elif eater_enter_obj._entered_by(self, new_reversed_direction, tracker, eater.is_flipped):
+        elif eater_enter_obj._entered_by(self, enter_obj_direction, tracker, eater.is_flipped):
             if self_flipped:
                 self.is_flipped ^= True
             return True

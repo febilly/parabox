@@ -8,23 +8,7 @@ from hub import select_level, load_levels_from_chapter, hub
 Tileset().init(2, 9, 64, 64)
 Palettes().init()
 
-try:
-    import uio
-    hub()
-    exit()
-except:
-    pass
-
-# level = Level(level)
-# level.play()
-
-# while True:
-#     level = select_level()
-#     level.play()
-
-# levels = load_levels_from_chapter()
-# for level in levels:
-#     level.play()
+hub()
 
 level = """
 version 4
@@ -155,18 +139,18 @@ Block -1 -1 0 7 7 0.6 0.8 1 1 0 0 0 0 0 0 0
 		Wall 0 1 0 0 0
 """
 
-level = Level(level)
-level.render(1)
-player = level.player
-from undo_record import UndoRecord
-level.undo_record.append(UndoRecord.Record.record_all(level.references))
-level.init_state.undo()
-player.pushed(directions.UP, level.undo_record)
-player.pushed(directions.UP, level.undo_record)
-player.pushed(directions.UP, level.undo_record)
-player.pushed(directions.LEFT, level.undo_record)
-player.pushed(directions.LEFT, level.undo_record)
-player.pushed(directions.LEFT, level.undo_record)
+# level = Level(level)
+# level.render(1)
+# player = level.player
+# from undo_record import UndoRecord
+# level.undo_record.append(UndoRecord.Record.record_all(level.references))
+# level.init_state.undo()
+# player.pushed(directions.UP, level.undo_record)
+# player.pushed(directions.UP, level.undo_record)
+# player.pushed(directions.UP, level.undo_record)
+# player.pushed(directions.LEFT, level.undo_record)
+# player.pushed(directions.LEFT, level.undo_record)
+# player.pushed(directions.LEFT, level.undo_record)
 
 
 
