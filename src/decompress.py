@@ -10,6 +10,10 @@ try:
     import io
 except:
     import uio as io
+    is_prime = True
+else:
+    is_prime = False
+
 import hpprime
 
 class BitInputStream:
@@ -427,7 +431,10 @@ class prime_open_rb:
 
 def decompress(gz_name):
     # Start reading
-    inp = prime_open_rb(gz_name, "rb")
+    if is_prime:
+        inp = prime_open_rb(gz_name, "rb")
+    else:
+        inp = open(gz_name, "rb")
 
     # Define helper read functions based on 'inp'
 

@@ -171,6 +171,7 @@ class Reference:
             if not isinstance(next_pos, tuple):
                 raise TypeError("next_pos is a {}, not a tuple".format(type(next_pos)))
 
+            # next_pos[3] == is_flipped
             new_direction = directions.reverse(direction) if next_pos[3] and directions.is_horizontal(direction) else direction
 
             # push
