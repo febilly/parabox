@@ -241,6 +241,8 @@ class Reference:
                 new_offset = 1 - new_offset
             else:
                 enterer_direction = directions.reverse(direction)
+        else:
+            enterer_direction = direction
 
         # this is the "early return" said above
         if enter_obj.pressed_direction is not None and enter_obj.pressed_direction != enterer_direction:
@@ -344,12 +346,12 @@ class Reference:
             if self_flipped:
                 self.is_flipped ^= True
             return True
-        elif eater_enter_obj._entered_by(self, enter_obj_direction, tracker, eater.is_flipped):
+        tracker.pop_last()
+        self.pressed_direction = None
+        if eater_enter_obj._entered_by(self, enter_obj_direction, tracker, 0.5, eater.is_flipped):
             if self_flipped:
                 self.is_flipped ^= True
             return True
-        tracker.pop_last()
-        self.pressed_direction = None
         # "self" block can not eat eater_enter_obj
         # so no need to check it
         # otherwise, it will be "self" block entering the eater block, instead of being eaten
