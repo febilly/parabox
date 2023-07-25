@@ -17,9 +17,8 @@ class Level:
         self.references: dict[int, list[Reference]] = {}
         self.graphic_mapping: dict[int, int] = {}
         self.graphic_splitter: GraphicSplitter = None
-        self.player: Reference = None
+        self.players: dict[int, Reference] = {}
         self.root_room: Room = None
-        self.possessable_count: int = 0
         self.goal_count = 0
         self.undo_record = UndoRecord()
         self.palette_index = palette_index
@@ -110,21 +109,19 @@ class Level:
             
             fillwithwalls = (args[10] == "1")
             player = (args[11] == "1")
+            possessable = (args[12] == "1")
+            playerorder = int(args[13])
             fliph = (args[14] == "1")
             floatinspace = (args[15] == "1")
 
             if id in self.rooms:
                 raise ValueError("Duplicated room id: {}".format(id))
-            if (args[12] == "1"):
-                self.possessable_count += 1
-                if self.possessable_count > 1:
-                    raise NotImplementedError("More than one possessable block in the level, not supported")
-            
+
             room = Room(width, height, id, (hue, sat, val), fillwithwalls)
             if not floatinspace:
-                reference = Reference(id, True, player, fliph)
+                reference = Reference(id, True, True, player, possessable, playerorder, fliph)
                 if player:
-                    self.player = reference
+                    self.players[playerorder] = reference
                 reference.pos = (x, y)
             else:
                 reference = None
@@ -146,20 +143,18 @@ class Level:
             id = int(args[3])
             exitblock = (args[4] == "1")
             player = (args[10] == "1")
+            possessable = (args[11] == "1")
+            playerorder = int(args[12])
             fliph = (args[13] == "1")
             floatinspace = (args[14] == "1")
 
             if (args[5] == "1" or args[6] == "1" or args[7] == "1" or args[8] == "1"):
                 raise NotImplementedError("infinity blocks are not supported")
-            if (args[11] == "1"):
-                self.possessable_count += 1
-                if self.possessable_count > 1:
-                    raise NotImplementedError("More than one possessable block in the level, not supported")
 
             if not floatinspace:
-                reference = Reference(id, exitblock, player, fliph)
+                reference = Reference(id, False, exitblock, player, possessable, playerorder, fliph)
                 if player:
-                    self.player = reference
+                    self.players[playerorder] = reference
                 reference.pos = (x, y)
             else:
                 reference = None
@@ -232,15 +227,23 @@ class Level:
                             room.reference_map[x][y].room = self.rooms[room.reference_map[x][y].id]
                             room.reference_map[x][y].parent_room = room
 
+            # references' "exitblock" overrides rooms' default exitblock (which is itself)
+            for room_id in self.references:
+                for reference in self.references[room_id]:
+                    if not reference.is_room_generated and reference.exit_block:
+                        for reference_2 in self.references[room_id]:
+                            if reference_2.is_room_generated:
+                                reference_2.exit_block = False
+                        break
+
             # assign rooms' reference
             for room in self.rooms.values():
                 if room.id in self.references:
                     for reference in self.references[room.id]:
                         if reference.exit_block:
-                            room.reference = reference
+                            room.exit_reference = reference
                             break
 
-        self.possessable_count = 0
         lines = string.split("\n")
         index = 0
         while index < len(lines):
@@ -257,29 +260,20 @@ class Level:
         self.root_room.is_root_room = True
         self.root_room.not_block = True
         assign()
-        # self.player.room.is_block = True
 
-    # def render(self, base_graphic, size: tuple[int, int] = (200, 200)):
-    #     self.graphic_mapping = {}
-    #     self.splitter_wall = GraphicSplitter(base_graphic, size[0], size[1], len(self.rooms), 0x000000)
-    #     index = 0
-    #     for room in self.rooms.values():
-    #         virtual_graphic = self.splitter_wall.get_virtual_graphic(index)
-    #         self.graphic_mapping[room.id] = index
-    #         index += 1
-    #         room.render(virtual_graphic, ((0, 0), (size[0] - 1, size[1] - 1)), self.rooms)
 
-    def render(self, base_graphic, room = None, size: tuple[int, int] = (200, 200)):
+    def render(self, base_graphic, room=None, size: tuple[int, int] = (200, 200)):
+        player_to_focus = self.players[0]
         if room is None:
-            room = self.player.parent_room
+            room = player_to_focus.parent_room
         background_color = 0
-        if room.reference is not None:
-            color = room.reference.parent_room.color[:2] + (room.reference.room.color[2] * 0.45,)
+        if room.exit_reference is not None:
+            color = room.exit_reference.parent_room.color[:2] + (room.exit_reference.room.color[2] * 0.45,)
             background_color = utils.Color.hsv_to_rgb_int(*color)
         hpprime.dimgrob(base_graphic, 320, 240, background_color)
         render_pos = ((320 - size[0]) // 2, (240 - size[1]) // 2)
         virtual_graphic = VirtualGraphic(base_graphic, render_pos[0], render_pos[1], size[0], size[1])
-        room.render(virtual_graphic, ((0, 0), (size[0] - 1, size[1] - 1)), self.player.is_flipped)
+        room.render(virtual_graphic, ((0, 0), (size[0] - 1, size[1] - 1)), player_to_focus.is_flipped)
         hpprime.blit(0, 0, 0, base_graphic)
 
     def is_completed(self):
@@ -291,25 +285,34 @@ class Level:
                 return False
         return True
 
+
+    def push_players(self, direction, undo_record, render=True):
+        for player_order in sorted(self.players):
+            self.players[player_order].pushed(direction, undo_record)
+            if render:
+                self.render(1)
+                if player_order != max(self.players):
+                    hpprime.eval("WAIT(0.1)")
+
     def play(self):
-        base_room = self.player.parent_room
+        base_room = self.players[0].parent_room
         self.render(1)
         while True:
             action = get_input()
             if action == actions.UP:
-                self.player.pushed(directions.UP, self.undo_record)
+                self.push_players(directions.UP, self.undo_record)
             elif action == actions.LEFT:
-                if not self.player.is_flipped:
-                    self.player.pushed(directions.LEFT, self.undo_record)
+                if not self.players[0].is_flipped:
+                    self.push_players(directions.LEFT, self.undo_record)
                 else:
-                    self.player.pushed(directions.RIGHT, self.undo_record)
+                    self.push_players(directions.RIGHT, self.undo_record)
             elif action == actions.DOWN:
-                self.player.pushed(directions.DOWN, self.undo_record)
+                self.push_players(directions.DOWN, self.undo_record)
             elif action == actions.RIGHT:
-                if not self.player.is_flipped:
-                    self.player.pushed(directions.RIGHT, self.undo_record)
+                if not self.players[0].is_flipped:
+                    self.push_players(directions.RIGHT, self.undo_record)
                 else:
-                    self.player.pushed(directions.LEFT, self.undo_record)
+                    self.push_players(directions.LEFT, self.undo_record)
             elif action == actions.UNDO:
                 self.undo_record.undo()
             elif action == actions.RESTART:

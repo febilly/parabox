@@ -1,4 +1,4 @@
-from time import time
+from time import time, sleep
 import os
 import pygame
 from typing import Union, Optional
@@ -129,21 +129,25 @@ def dimgrob(graphic, width, height, color):
     graphics[graphic] = canvas
     check_flip(graphic)
 
+def translucent_rect(surface, color_tuple, x, y, width, height, line_width=0):
+    rect_surface = pygame.Surface((width, height), flags=pygame.SRCALPHA)
+    pygame.draw.rect(rect_surface, color_tuple, (0, 0, width, height), width=line_width)
+    surface.blit(rect_surface, (x, y))
+
 def rect(graphic, x, y, width, height, color):
     if LOGGING:
         print(f"rect({graphic}, {x}, {y}, {width}, {height}, {color})")
     color_tuple = int_color_to_tuple(color)
-    pygame.draw.rect(graphics[graphic], color_tuple, (x, y, width, height), width=1)
+    translucent_rect(graphics[graphic], color_tuple, x, y, width, height, line_width=1)
     check_flip(graphic)
-
 
 def fillrect(graphic, x, y, width, height, color_edge, color_fill):
     if LOGGING:
         print(f"fillrect({graphic}, {x}, {y}, {width}, {height}, {color_edge}, {color_fill})")
     color_edge_tuple = int_color_to_tuple(color_edge)
     color_fill_tuple = int_color_to_tuple(color_fill)
-    pygame.draw.rect(graphics[graphic], color_fill_tuple, (x, y, width, height))
-    pygame.draw.rect(graphics[graphic], color_edge_tuple, (x, y, width, height), width=1)
+    translucent_rect(graphics[graphic], color_fill_tuple, x, y, width, height)
+    translucent_rect(graphics[graphic], color_edge_tuple, x, y, width, height, line_width=1)
     check_flip(graphic)
 
 
@@ -220,6 +224,7 @@ def eval(string):
     get_variable_pattern = r'^ *([A-Z]) *$'
     choose_pattern = r'^ *CHOOSE\(([A-Z]), *(.+)\) *$'
     textout_pattern = r'^ *TEXTOUT_P\("(.+)", *(.+)\) *$'
+    wait_pattern = r'^ *WAIT\(([0-9\.]+)\) *$'
 
     if LOGGING:
         if string != "GETKEY":
@@ -317,6 +322,11 @@ def eval(string):
             text_surface = text_surface.subsurface((0, 0, max_width, text_surface.get_height()))
         graphics[graphic].blit(text_surface, (x, y))
         check_flip(graphic)
+    elif matched := re.match(wait_pattern, string, re.IGNORECASE):
+        seconds = float(matched.group(1))
+        if LOGGING:
+            print(f"Waiting for {seconds} seconds")
+        sleep(seconds)
 
 
 def textout(graphic, x, y, text, color):

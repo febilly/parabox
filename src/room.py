@@ -17,7 +17,7 @@ class Room:
         self.not_block = not_block  # to make the root room render even if it is surrounded by walls
         self.is_root_room = False
         self.static_is_surrounded = None
-        self.reference: reference.Reference = None
+        self.exit_reference: reference.Reference = None
         # coordinates start at 0,0 in the bottom left corner
         self.wall_map = [[False for y in range(height)] for x in range(width)]
         self.reference_map: list[list[reference.Reference]] = [[None for y in range(height)] for x in range(width)]
@@ -92,6 +92,8 @@ class Room:
                         virtual_graphic.draw_empty_box_area(inner_area, 0)
                         if not self.reference_map[x][y].exit_block:
                             virtual_graphic.draw_filled_box_area(inner_area, 0x80ffffff, 0)
+                        if self.reference_map[x][y].is_player:
+                            virtual_graphic.draw_tile_area("Player", inner_area)
 
             for button in self.buttons:
                 render_x = self.width - button.pos[0] - 1 if render_as_flipped else button.pos[0]
@@ -101,8 +103,7 @@ class Room:
 
             virtual_graphic.draw_empty_box_area(area, 0)
 
-        if self.reference is not None and self.reference.is_player:
-            virtual_graphic.draw_tile_area("Player", area)
+
 
     def is_in_bound(self, pos):
         return 0 <= pos[0] < self.width and 0 <= pos[1] < self.height

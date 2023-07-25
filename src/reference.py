@@ -10,10 +10,13 @@ class Reference:
     player is a reference, too
     """
 
-    def __init__(self, id, exit_block=True, is_player=False, is_flipped=False):
+    def __init__(self, id, is_room_generated, exit_block, is_player, is_possessable, playerorder, is_flipped):
         self.id = id
+        self.is_room_generated = is_room_generated
         self.exit_block = exit_block
         self.is_player = is_player
+        self.is_possessable = is_possessable
+        self.playerorder = playerorder
         self.parent_room: room.Room = None
         self.room: room.Room = None
         self.pos: tuple[int, int] = (-1, -1)
@@ -40,7 +43,7 @@ class Reference:
             return object_types.WALL  # TODO: check this
         else:
             # return the next pos of self.parent_room.reference
-            if self.parent_room.reference is None:
+            if self.parent_room.exit_reference is None:
                 return object_types.WALL
             self.queried_poses.append((self.pos, direction))
             tested.append(self)
@@ -51,13 +54,13 @@ class Reference:
                 new_offset = (self.pos[1] + offset) / self.parent_room.height
 
             new_direction = direction
-            if self.parent_room.reference.is_flipped:
+            if self.parent_room.exit_reference.is_flipped:
                 if directions.is_vertical(direction):
                     new_offset = 1 - new_offset
                 else:
                     new_direction = directions.reverse(direction)
 
-            return self.parent_room.reference._get_next_pos(new_direction, tested, can_exit, new_offset, is_flipped ^ self.parent_room.reference.is_flipped)
+            return self.parent_room.exit_reference._get_next_pos(new_direction, tested, can_exit, new_offset, is_flipped ^ self.parent_room.exit_reference.is_flipped)
 
     def get_next_pos(self, direction: int, can_exit=True):
         """

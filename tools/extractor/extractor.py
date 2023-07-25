@@ -9,7 +9,7 @@ levels = text.split("\n")
 
 level_dict: dict[str, dict[int, tuple[str, bool, str]]] = {}
 
-level_name = {"a": "01_Intro",
+chaper_names = {"a": "01_Intro",
               "b": "02_Enter",
               "c": "03_Empty",
               "d": "04_Eat",
@@ -18,7 +18,10 @@ level_name = {"a": "01_Intro",
               "f": "07_Center",
               "g": "08_Clone",
               "h": "09_Transfer",
-              "i": "10_Open"}
+              "i": "10_Open",
+              "j": "11_Flip",
+              "k": "12_Cycle",
+              "m": "13_Player"}
 
 for level in levels:
     if level == "":
@@ -48,7 +51,7 @@ if os.path.isfile("output/palettes.txt"):
     os.remove("output/palettes.txt")
 shutil.copy("input/palettes.txt", "output/palettes.txt")
 
-for chapter in level_name:
+for chapter in chaper_names:
     content = ""
     level_seperator = "$"
     arg_seperator = "|"
@@ -59,7 +62,7 @@ for chapter in level_name:
         content += f"{name}{arg_seperator}{palette_index}{arg_seperator}{hard}{arg_seperator}{puzzle_text}{level_seperator}"
     content = content[:-1]
 
-    gz_name = f"output/chapter_{level_name[chapter]}.txt.gz"
+    gz_name = f"output/chapter_{chaper_names[chapter]}.txt.gz"
     if os.path.isdir(gz_name):
         raise Exception(f"name \"{gz_name}\" is already being used by a directory")
     compressed_file = gzip.open(gz_name, "wb")
