@@ -26,6 +26,7 @@ class Tileset:
         self.count = len(tile_files)
         # hpprime.dimgrob(base_canvas, self.width * self.count, self.height, 0xffffffff)
         hpprime.eval("DIMGROB_P(G{}, {}, {}, #FFFFFFFFh)".format(base_canvas, self.width * self.count, self.height))
+        # hpprime.dimgrob(temp_canvas, self.width, self.height, 0xffffffff)
         for index in range(self.count):
             hpprime.eval("G{}:=AFiles(\"{}\")".format(self.temp_canvas, tile_files[index]))
             hpprime.strblit2(base_canvas, index * self.width, 0, self.width, self.height, self.temp_canvas, 0, 0, self.width, self.height)
@@ -41,7 +42,7 @@ class Tileset:
         index = self.tileset[name]
         hpprime.blit(canvas, x, y, self.base_canvas)
 
-    def draw_tile_size(self, name: str, canvas: int, x: int, y: int, height: int, width: int):
+    def draw_tile_size(self, name: str, canvas: int, x: int, y: int, width: int, height: int):
         if not self.inited:
             raise Exception("Tileset not inited")
         if name not in self.tileset:

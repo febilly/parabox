@@ -13,12 +13,11 @@ class VirtualGraphic:
     def draw_filled_box_pos(self, x1, y1, x2, y2, color, border_color=None):
         # TODO: adjust the thickness of the border based on the size of the box
         if border_color is not None:
-            # fuck you hp
-            # hpprime.fillrect(self.canvas, self.start_x + x, self.start_y + y, width, height, border_color, color)
-            hpprime.eval("RECT_P(G{}, {}, {}, {}, {}, {}, {})".format(self.canvas, self.start_x + x1, self.start_y + y1, self.start_x + x2, self.start_y + y2, border_color, color))
+            hpprime.fillrect(self.canvas, self.start_x + x1, self.start_y + y1, x2 - x1 + 1, y2 - y1 + 1, border_color, color)
+            # hpprime.eval("RECT_P(G{}, {}, {}, {}, {}, {}, {})".format(self.canvas, self.start_x + x1, self.start_y + y1, self.start_x + x2, self.start_y + y2, border_color, color))
         else:
-            # hpprime.fillrect(self.canvas, self.start_x + x, self.start_y + y, width, height, color, color)
-            hpprime.eval("RECT_P(G{}, {}, {}, {}, {}, {})".format(self.canvas, self.start_x + x1, self.start_y + y1, self.start_x + x2, self.start_y + y2, color))
+            hpprime.fillrect(self.canvas, self.start_x + x1, self.start_y + y1, x2 - x1 + 1, y2 - y1 + 1, color, color)
+            # hpprime.eval("RECT_P(G{}, {}, {}, {}, {}, {})".format(self.canvas, self.start_x + x1, self.start_y + y1, self.start_x + x2, self.start_y + y2, color))
 
     def draw_filled_box_size(self, x, y, width, height, color, border_color=None):
         self.draw_filled_box_pos(x, y, x + width - 1, y + height - 1, color, border_color)

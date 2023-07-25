@@ -3,6 +3,12 @@ LEFT = 2
 DOWN = 3
 RIGHT = 4
 
+# +y
+# ^
+# |
+# |
+# └───> +x
+
 def id_to_name(direction: int) -> str:
     if direction == UP:
         return "UP"
@@ -60,14 +66,26 @@ def next_pos(pos: tuple[int, int], direction: int) -> tuple[int, int]:
         return pos[0] + 1, pos[1]
     raise ValueError("invalid direction: {}".format(direction))
 
-def enter_pos(enter_direction: int, width: int, height: int, offset = 0.5):
+def enter_pos(enter_direction: int, width: int, height: int, is_flipped: bool, offset = 0.5) -> tuple[int, int]:
     offset += 1e-6
     if enter_direction == UP:
-        return (int(width * offset), 0)
+        unflipped_pos = (int(width * offset), 0)
     elif enter_direction == LEFT:
-        return (width - 1, int(height * offset))
+        unflipped_pos = (width - 1, int(height * offset))
     elif enter_direction == DOWN:
-        return (int(width * offset), height - 1)
+        unflipped_pos = (int(width * offset), height - 1)
     elif enter_direction == RIGHT:
-        return (0, int(height * offset))
-    raise ValueError("invalid direction: {}".format(enter_direction))
+        unflipped_pos = (0, int(height * offset))
+    else:
+        raise ValueError("invalid direction: {}".format(enter_direction))
+
+    if is_flipped:
+        return (width - 1 - unflipped_pos[0], unflipped_pos[1])
+    else:
+        return unflipped_pos
+
+def is_vertical(direction: int) -> bool:
+    return direction == UP or direction == DOWN
+
+def is_horizontal(direction: int) -> bool:
+    return direction == LEFT or direction == RIGHT
