@@ -44,13 +44,13 @@ class Room:
             if self.width == 0 and self.height == 0:
                 return self.wall_map[0][0]
             # check the top and bottom
-            for i in range(self.width - 1):
+            for i in range(self.width):
                 if not self.wall_map[i][0]:
                     return False
                 if not self.wall_map[self.width - i - 1][self.height - 1]:
                     return False
             # check the left and right
-            for i in range(self.height - 1):
+            for i in range(self.height):
                 if not self.wall_map[0][i]:
                     return False
                 if not self.wall_map[self.width - 1][self.height - i - 1]:
@@ -94,6 +94,8 @@ class Room:
                             virtual_graphic.draw_filled_box_area(inner_area, 0x80ffffff, 0)
                         if self.reference_map[x][y].is_player:
                             virtual_graphic.draw_tile_area("Player", inner_area)
+                        if self.reference_map[x][y].is_possessable and not self.reference_map[x][y].is_player:
+                            virtual_graphic.draw_tile_area("Possessable", inner_area)
 
             for button in self.buttons:
                 render_x = self.width - button.pos[0] - 1 if render_as_flipped else button.pos[0]

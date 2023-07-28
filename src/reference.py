@@ -80,11 +80,12 @@ class Reference:
             return pos[0].get(pos[1])
 
     class MoveRecord:
-        def __init__(self, reference: "Reference", new_parent_room, new_pos: tuple[int, int], is_flipped: bool):
+        def __init__(self, reference: "Reference", new_parent_room, new_pos: tuple[int, int], is_flipped: bool, is_player=None):
             self.reference = reference
             self.new_parent_room = new_parent_room
             self.new_pos = new_pos
             self.is_flipped = is_flipped
+            self.is_player = is_player
 
         def __eq__(self, other):
             return self.reference == other.reference  # TODO: check this
@@ -93,6 +94,7 @@ class Reference:
         PUSH = 1
         ENTER = 2
         EAT = 3
+        POSSESS = 4
 
         def __init__(self):
             self.actions: list[int] = []
@@ -110,12 +112,16 @@ class Reference:
             self.records.append(record)
             self.actions.append(self.EAT)
 
+        def move_possess(self, record: "Reference.MoveRecord"):
+            self.records.append(record)
+            self.actions.append(self.POSSESS)
+
         def pop_last(self):
             self.actions.pop()
             return self.records.pop()
 
-    def conduct_record(self, records: list["Reference.MoveRecord"], undo: undo_record.UndoRecord):
-        # find
+    def conduct_record(self, records: list["Reference.MoveRecord"], undo: undo_record.UndoRecord, level_players: dict[int, "Reference"]):
+        # find the cycle
         if records.count(records[-1]) < 2:
             records_to_conduct = records
         else:
@@ -141,8 +147,12 @@ class Reference:
             reference.pos = new_pos
             new_map = reference.parent_room.reference_map
             new_map[new_pos[0]][new_pos[1]] = reference
+            if record.is_player is not None:
+                if record.is_player:
+                    level_players[reference.playerorder] = reference
+                reference.is_player = record.is_player
 
-    def _pushed(self, direction: int, tracker: MoveTracker):
+    def _pushed(self, direction: int, tracker: MoveTracker, is_first_movement=False):
         """
         check if "self" object is pushable in the given direction
         """
@@ -180,13 +190,13 @@ class Reference:
             # push
             tracker.move_push(self.MoveRecord(self, next_pos[0], next_pos[1], next_pos[3]))
             self.pressed_direction = direction
-            if next_obj._pushed(new_direction, tracker):
+            if next_obj._pushed(new_direction, tracker, False):
                 return True
             tracker.pop_last()
             self.pressed_direction = None
 
             # enter
-            if next_obj._entered_by(self, new_direction, tracker, next_pos[2], next_pos[3]):
+            if next_obj._entered_by(self, new_direction, tracker, next_pos[2], next_pos[3], is_first_movement):
                 return True
 
             # eat
@@ -197,21 +207,28 @@ class Reference:
             tracker.pop_last()
             self.pressed_direction = None
 
+            # possess
+            if is_first_movement:
+                self.pressed_direction = direction
+                if next_obj._possessed_by(self, tracker):
+                    return True
+                self.pressed_direction = None
+
             return False
 
-    def pushed(self, direction: int, _undo_record: undo_record.UndoRecord, dry_run=False):
+    def pushed(self, direction: int, _undo_record: undo_record.UndoRecord, level_players: dict[int, "Reference"], dry_run=False):
         """
         check if "self" object is pushable in the given direction
         """
         tracker = self.MoveTracker()
-        result = self._pushed(direction, tracker)
+        result = self._pushed(direction, tracker, True)
         if result and not dry_run:
-            self.conduct_record(tracker.records, _undo_record)
+            self.conduct_record(tracker.records, _undo_record, level_players)
         for record in tracker.records:
             record.reference.pressed_direction = None
         return result
 
-    def _entered_by(self, enterer: "Reference", direction: int, tracker: MoveTracker, offset=0.5, enterer_already_should_flip=False):
+    def _entered_by(self, enterer: "Reference", direction: int, tracker: MoveTracker, offset=0.5, enterer_already_should_flip=False, is_first_movement=False):
         """
         check if other objects can enter "self" object in the given direction
         (direction is where the "other object" want to go)
@@ -264,7 +281,7 @@ class Reference:
         # push
         tracker.move_enter(self.MoveRecord(enterer, self.room, enter_pos, enterer_already_should_flip ^ self.is_flipped))
         enterer.pressed_direction = enterer_direction
-        if enter_obj._pushed(enterer_direction, tracker):
+        if enter_obj._pushed(enterer_direction, tracker, False):
             if enterer_flipped:
                 enterer.is_flipped ^= True
             return True
@@ -272,7 +289,7 @@ class Reference:
         enterer.pressed_direction = None
 
         # enter
-        if enter_obj._entered_by(enterer, enterer_direction, tracker, new_offset, enterer_already_should_flip ^ self.is_flipped):
+        if enter_obj._entered_by(enterer, enterer_direction, tracker, new_offset, enterer_already_should_flip ^ self.is_flipped, is_first_movement):
             if enterer_flipped:
                 enterer.is_flipped ^= True
             return True
@@ -290,14 +307,20 @@ class Reference:
         # failed, clean up
         tracker.pop_last()
         self.pressed_direction = None
-
         if enterer_flipped:
             enterer.is_flipped ^= True
+
+        # possess
+        if is_first_movement:
+            self.pressed_direction = direction
+            if enter_obj._possessed_by(enterer, tracker):
+                return True
+            self.pressed_direction = None
 
         return False
 
 
-    def entered_by(self, enterer: "Reference", direction: int, _undo_record: undo_record.UndoRecord, offset=0.5, dry_run=False):
+    def entered_by(self, enterer: "Reference", direction: int, _undo_record: undo_record.UndoRecord, level_players: dict[int, "Reference"], offset=0.5, dry_run=False):
         """
         check if other objects can enter "self" object in the given direction
         (direction is where the "other object" want to go)
@@ -305,7 +328,7 @@ class Reference:
         tracker = self.MoveTracker()
         result = self._entered_by(enterer, direction, tracker, offset)
         if result and not dry_run:
-            self.conduct_record(tracker.records, _undo_record)
+            self.conduct_record(tracker.records, _undo_record, level_players)
         for record in tracker.records:
             record.reference.pressed_direction = None
         return result
@@ -357,13 +380,13 @@ class Reference:
             return True
         # "self" block can not eat eater_enter_obj
         # so no need to check it
-        # otherwise, it will be "self" block entering the eater block, instead of being eaten
+        # otherwise, it will be eater block entering the "self" block, instead of eating "self" block
         if self_flipped:
             self.is_flipped ^= True
 
         return False
 
-    def eaten_by(self, eater: "Reference", direction: int, _undo_record: undo_record.UndoRecord, dry_run=False):
+    def eaten_by(self, eater: "Reference", direction: int, _undo_record: undo_record.UndoRecord, level_players: dict[int, "Reference"], dry_run=False):
         """
         check if "self" objects can be eaten by the "eater" object in the given direction
         (direction is where the "eater" object want to go)
@@ -372,7 +395,43 @@ class Reference:
         tracker = self.MoveTracker()
         result = self._entered_by(eater, direction, tracker)
         if result and not dry_run:
-            self.conduct_record(tracker.records, _undo_record)
+            self.conduct_record(tracker.records, _undo_record, level_players)
         for record in tracker.records:
             record.reference.pressed_direction = None
         return result
+
+
+    def _possessed_by(self, ghost_holder: "Reference", tracker: MoveTracker):
+        """
+        check if "self" objects can be possessed by the "ghost_holder" object in the given direction
+        (direction is where the "ghost_holder" object want to go)
+        suppose the ghost_holder is going to go to the position of "self" object
+        """
+
+        # precheck, check if ghost_holder is player and if self is possessable
+        if not self.is_possessable or self.is_player:
+            return False
+        if not ghost_holder.is_player:
+            return False
+
+        # check passed
+        tracker.move_possess(self.MoveRecord(ghost_holder, ghost_holder.parent_room, ghost_holder.pos, False, False))
+        tracker.move_possess(self.MoveRecord(self, self.parent_room, self.pos, False, True))
+
+        return True
+
+
+    def possessed_by(self, ghost_holder: "Reference", _undo_record: undo_record.UndoRecord, level_players: dict[int, "Reference"], dry_run=False):
+        """
+        check if "self" objects can be possessed by the "ghost_holder" object in the given direction
+        (direction is where the "ghost_holder" object want to go)
+        suppose the ghost_holder is going to go to the position of "self" object
+        """
+        tracker = self.MoveTracker()
+        result = self._possessed_by(ghost_holder, tracker)
+        if result and not dry_run:
+            self.conduct_record(tracker.records, _undo_record, level_players)
+        for record in tracker.records:
+            record.reference.pressed_direction = None
+        return result
+

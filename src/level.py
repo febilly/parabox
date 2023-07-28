@@ -288,7 +288,7 @@ class Level:
 
     def push_players(self, direction, undo_record, render=True):
         for player_order in sorted(self.players):
-            self.players[player_order].pushed(direction, undo_record)
+            self.players[player_order].pushed(direction, undo_record, self.players)
             if render:
                 self.render(1)
                 if player_order != max(self.players):
@@ -314,10 +314,10 @@ class Level:
                 else:
                     self.push_players(directions.LEFT, self.undo_record)
             elif action == actions.UNDO:
-                self.undo_record.undo()
+                self.undo_record.undo(self.players)
             elif action == actions.RESTART:
                 self.undo_record.append(UndoRecord.Record.record_all(self.references))
-                self.init_state.undo()
+                self.init_state.undo(self.players)
 
             self.render(1)
             # self.render(1, base_room)
