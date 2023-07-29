@@ -1,6 +1,6 @@
 This is a (incomplete) clone of Patrick's Parabox for the calculator HP Prime.
 ![Screenshot](doc/screenshot.png)
-This is a work in progress. Currently only the first 13 chapters from the original game are supported.
+This is a work in progress. Currently only the first 15 chapters from the original game are supported, and the first 12 chapters are bug-free.
 
 # Installation:
 - Download this repository and install `Patrick's Parabox`
@@ -11,6 +11,11 @@ and put them(\*.txt files) in
 - Run `tools\extractor\extractor.py`
 - Copy everything in `tools\extractor\output` to `release\box.hpappdir`
 - Install `box.hpappdir` to your HP Prime using HP Connectivity Kit
+
+# For running on PC:
+- Do the same as above except for the last step
+- Copy `hpprime.py` (from `/src`) and optionally `PrimeSansFull.ttf` (from `C:\Program Files\HP\HP Prime Virtual Calculator\fonts`) to `release\box.hpappdir`
+- double click `main.py` to run
 
 # Controls:
 - Move: arrow keys or `ab/c` `TAN` `LN` `LOG`

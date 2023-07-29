@@ -316,7 +316,10 @@ def eval(string):
 
         text_color = int_color_to_tuple(text_color)
         background_color = int_color_to_tuple(background_color)
-        font = pygame.font.Font("PrimeSansFull.ttf", font_size)
+        if os.path.exists("PrimeSansFull.ttf"):
+            font = pygame.font.Font("PrimeSansFull.ttf", font_size)
+        else:
+            font = pygame.font.Font(None, font_size)
         text_surface = font.render(text, True, text_color, background_color)
         if text_surface.get_width() > max_width > 0:
             text_surface = text_surface.subsurface((0, 0, max_width, text_surface.get_height()))
