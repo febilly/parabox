@@ -13,9 +13,9 @@ and put them(\*.txt files) in
 - Install `box.hpappdir` to your HP Prime using HP Connectivity Kit
 
 # For running on PC:
-- Install [Python](https://www.python.org) and [pygame library](https://www.pygame.org/docs/)
 - Do the same as above except for the last step
-- Copy `hpprime.py` (from `/src`) and optionally `PrimeSansFull.ttf` (from `C:\Program Files\HP\HP Prime Virtual Calculator\fonts`) to `release\box.hpappdir`
+- Install [Python](https://www.python.org) and [pygame library](https://www.pygame.org/docs/) (and optionally [HP Prime Virtual Calculator Emulator](https://www.hpcalc.org/details/8939))
+- Copy `hpprime.py` (from `/src`) (and optionally `PrimeSansFull.ttf` (from `C:\Program Files\HP\HP Prime Virtual Calculator\fonts`)) to `release\box.hpappdir`
 - Double click `main.py` to run
 - On PC, use arrow keys to move, `Backspace` to undo, and `Esc` to restart
 
