@@ -14,7 +14,8 @@ from palettes import Palettes
 class Level:
     def __init__(self, string     , palette_index=-1):
         self.rooms                  = {}
-        self.references                             = {}
+        self.references                             = {}  # not including possessable walls
+        self.possessable_walls                  = []
         self.graphic_mapping                 = {}
         self.graphic_splitter                  = None
         self.players                       = {}
@@ -23,7 +24,7 @@ class Level:
         self.undo_record = UndoRecord()
         self.palette_index = palette_index
         self.load(string)
-        self.init_state = UndoRecord.Record.record_all(self.references)
+        self.init_state = UndoRecord.Record.record_all(self.references, self.possessable_walls)
 
     def add_reference(self, index     , reference           ):
         if index in self.references:
@@ -119,10 +120,9 @@ class Level:
 
             room = Room(width, height, id, (hue, sat, val), fillwithwalls)
             if not floatinspace:
-                reference = Reference(id, True, True, player, possessable, playerorder, fliph)
+                reference = Reference(id, (x, y), True, True, player, possessable, playerorder, fliph, False)
                 if player:
                     self.players[playerorder] = reference
-                reference.pos = (x, y)
             else:
                 reference = None
             
@@ -152,10 +152,9 @@ class Level:
                 raise NotImplementedError("infinity blocks are not supported")
 
             if not floatinspace:
-                reference = Reference(id, False, exitblock, player, possessable, playerorder, fliph)
+                reference = Reference(id, (x, y), False, exitblock, player, possessable, playerorder, fliph, False)
                 if player:
                     self.players[playerorder] = reference
-                reference.pos = (x, y)
             else:
                 reference = None
 
@@ -180,9 +179,16 @@ class Level:
                 if args[0] == "Wall":
                     x = int(args[1])
                     y = int(args[2])
-                    room.wall_map[x][y] = True
-                    if (args[3] == "1" or args[4] == "1"):
-                        raise NotImplementedError("possessable walls are not supported")
+                    if args[4] == "1":
+                        is_player = (args[3] == "1")
+                        playerorder = int(args[5])
+                        wall_reference = Reference(None, (x, y), False, True, is_player, True, playerorder, False, True)
+                        room.reference_map[x][y] = wall_reference
+                        self.possessable_walls.append(wall_reference)
+                        if is_player:
+                            self.players[playerorder] = wall_reference
+                    else:
+                        room.wall_map[x][y] = True
                     index += 1
                 elif args[0] == "Block":
                     sub_room_lines = extract_room_lines(lines[index:])
@@ -224,8 +230,9 @@ class Level:
                 for x in range(room.width):
                     for y in range(room.height):
                         if room.reference_map[x][y] is not None:
-                            room.reference_map[x][y].room = self.rooms[room.reference_map[x][y].id]
                             room.reference_map[x][y].parent_room = room
+                            if not room.reference_map[x][y].is_wall:
+                                room.reference_map[x][y].room = self.rooms[room.reference_map[x][y].id]
 
             # references' "exitblock" overrides rooms' default exitblock (which is itself)
             for room_id in self.references:
@@ -286,13 +293,13 @@ class Level:
         return True
 
 
-    def push_players(self, direction, undo_record, render=True):
+    def push_players(self, direction, undo_record, render=True, delay=0.1):
         for player_order in sorted(self.players):
             self.players[player_order].pushed(direction, undo_record, self.players)
             if render:
                 self.render(1)
                 if player_order != max(self.players):
-                    hpprime.eval("WAIT(0.1)")
+                    hpprime.eval("WAIT({})".format(delay))
 
     def play(self):
         base_room = self.players[0].parent_room
@@ -316,7 +323,7 @@ class Level:
             elif action == actions.UNDO:
                 self.undo_record.undo(self.players)
             elif action == actions.RESTART:
-                self.undo_record.append(UndoRecord.Record.record_all(self.references))
+                self.undo_record.append(UndoRecord.Record.record_all(self.references, self.possessable_walls))
                 self.init_state.undo(self.players)
 
             self.render(1)

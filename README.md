@@ -26,3 +26,4 @@ and put them(\*.txt files) in
 - iwVerve for [Parafox](https://github.com/iwVerve/Parafox)
 - Perfare for [AssetStudio](https://github.com/Perfare/AssetStudio)
 - Nayuki for [Simple DEFLATE decompressor](https://github.com/nayuki/Simple-DEFLATE-decompressor) (MIT License)
+- nana and geerky42 for [this steam community guide (Direction Input Walkthrough)](https://steamcommunity.com/sharedfiles/filedetails/?id=2786724419)

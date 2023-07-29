@@ -8,12 +8,12 @@ import button
 
 
 class Room:
-    def __init__(self, width, height, id, color: tuple, is_block=False, not_block=False):
+    def __init__(self, width, height, id, color: tuple, fill_with_blocks=False, not_block=False):
         self.width = width
         self.height = height
         self.id = id
         self.color = color
-        self.is_block = is_block
+        self.fill_with_blocks = fill_with_blocks
         self.not_block = not_block  # to make the root room render even if it is surrounded by walls
         self.is_root_room = False
         self.static_is_surrounded = None
@@ -72,7 +72,7 @@ class Room:
 
         wall_color_int = utils.Color.hsv_to_rgb_int(*self.color)
 
-        if self.is_block or (not self.not_block and is_surrounded_by_wall()):
+        if self.fill_with_blocks or (not self.not_block and is_surrounded_by_wall()):
             virtual_graphic.draw_filled_box_area(area, wall_color_int, 0)
         else:
             ground_color = self.color[:2] + (self.color[2] * 0.45,)
@@ -86,10 +86,13 @@ class Room:
                         virtual_graphic.draw_filled_box_area(self.sub_area(area, render_x, self.height - render_y - 1), wall_color_int)
                     elif self.reference_map[x][y] is not None:
                         inner_reference = self.reference_map[x][y]
-                        inner_room = inner_reference.room
                         inner_area = self.sub_area(area, render_x, self.height - render_y - 1)
-                        inner_room.render(virtual_graphic, inner_area, render_as_flipped ^ inner_reference.is_flipped)
-                        virtual_graphic.draw_empty_box_area(inner_area, 0)
+                        if not inner_reference.is_wall:
+                            inner_room = inner_reference.room
+                            inner_room.render(virtual_graphic, inner_area, render_as_flipped ^ inner_reference.is_flipped)
+                            virtual_graphic.draw_empty_box_area(inner_area, 0)
+                        else:
+                            virtual_graphic.draw_filled_box_area(inner_area, wall_color_int)
                         if not self.reference_map[x][y].exit_block:
                             virtual_graphic.draw_filled_box_area(inner_area, 0x80ffffff, 0)
                         if self.reference_map[x][y].is_player:
@@ -111,7 +114,7 @@ class Room:
         return 0 <= pos[0] < self.width and 0 <= pos[1] < self.height
 
     def get(self, pos):
-        if self.is_block:
+        if self.fill_with_blocks:
             return object_types.WALL
         reference = self.reference_map[pos[0]][pos[1]]
         if reference is not None:

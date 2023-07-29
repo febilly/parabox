@@ -55,7 +55,7 @@ def select_level()         :
     gz_files = list()
     chapters            = []
     for file in all_files:
-        if file.startswith("chapter_"):
+        if file.startswith("chapter_") and file.endswith(".gz"):
             gz_files.append(file)
             chapters.append(file[11:-7])
     
@@ -88,7 +88,7 @@ def load_levels_from_chapter()               :
     gz_files = list()
     chapters            = []
     for file in all_files:
-        if file.startswith("chapter_"):
+        if file.startswith("chapter_") and file.endswith(".gz"):
             gz_files.append(file)
             chapters.append(file[11:-7])
     

@@ -29,12 +29,14 @@ class UndoRecord:
             return record
 
         @classmethod
-        # def record_all(cls, references: dict[int, list[reference.Reference]]):
-        def record_all(cls, references):
+        # def record_all(cls, references: dict[int, list[reference.Reference]], possessable_walls: list[reference.Reference]):
+        def record_all(cls, references, possessable_walls):
             record = cls()
             for reference_list in references.values():
                 for reference in reference_list:
                     record.append(UndoRecord.Movement(reference, reference.parent_room, reference.pos, reference.is_flipped, reference.is_player))
+            for reference in possessable_walls:
+                record.append(UndoRecord.Movement(reference, reference.parent_room, reference.pos, reference.is_flipped, reference.is_player))
             return record
 
         def undo(self, level_players: dict):

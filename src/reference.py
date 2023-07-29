@@ -7,11 +7,12 @@ import undo_record
 class Reference:
     """
     a reference to a room
-    player is a reference, too
+    players and possessable walls are references, too
     """
 
-    def __init__(self, id, is_room_generated, exit_block, is_player, is_possessable, playerorder, is_flipped):
+    def __init__(self, id, pos, is_room_generated, exit_block, is_player, is_possessable, playerorder, is_flipped, is_wall):
         self.id = id
+        self.pos: tuple[int, int] = pos
         self.is_room_generated = is_room_generated
         self.exit_block = exit_block
         self.is_player = is_player
@@ -19,10 +20,10 @@ class Reference:
         self.playerorder = playerorder
         self.parent_room: room.Room = None
         self.room: room.Room = None
-        self.pos: tuple[int, int] = (-1, -1)
         self.queried_poses: list[tuple[tuple[int, int], int]] = []  # (pos, direction)
         self.pressed_direction = None
         self.is_flipped = is_flipped  # whether this reference is flipped relative to its parent room
+        self.is_wall = is_wall
         pass
 
     def _get_next_pos(self, direction: int, tested: list["Reference"], can_exit, offset=0.5, is_flipped=False):
@@ -184,28 +185,48 @@ class Reference:
             if not isinstance(next_pos, tuple):
                 raise TypeError("next_pos is a {}, not a tuple".format(type(next_pos)))
 
-            # next_pos[3] == is_flipped
-            new_direction = directions.reverse(direction) if next_pos[3] and directions.is_horizontal(direction) else direction
 
-            # push
-            tracker.move_push(self.MoveRecord(self, next_pos[0], next_pos[1], next_pos[3]))
-            self.pressed_direction = direction
-            if next_obj._pushed(new_direction, tracker, False):
-                return True
-            tracker.pop_last()
-            self.pressed_direction = None
+            # possessable walls are only possessable, not pushable or something else
+            if not next_obj.is_wall:
+                # prepare
+                # "next_pos[3]" == "is_flipped"
+                new_direction = directions.reverse(direction) if next_pos[3] and directions.is_horizontal(direction) else direction
+                if next_pos[3]:
+                    self.is_flipped ^= True
+                self_flipped = next_pos[3]
 
-            # enter
-            if next_obj._entered_by(self, new_direction, tracker, next_pos[2], next_pos[3], is_first_movement):
-                return True
+                # push
+                tracker.move_push(self.MoveRecord(self, next_pos[0], next_pos[1], next_pos[3]))
+                self.pressed_direction = direction
+                if next_obj._pushed(new_direction, tracker, False):
+                    if self_flipped:
+                        self.is_flipped ^= True
+                    return True
+                tracker.pop_last()
+                self.pressed_direction = None
 
-            # eat
-            tracker.move_push(self.MoveRecord(self, next_pos[0], next_pos[1], next_pos[3]))
-            self.pressed_direction = direction
-            if next_obj._eaten_by(self, new_direction, tracker):
-                return True
-            tracker.pop_last()
-            self.pressed_direction = None
+                # enter
+                self.pressed_direction = direction
+                if next_obj._entered_by(self, new_direction, tracker, next_pos[2], next_pos[3], is_first_movement):
+                    if self_flipped:
+                        self.is_flipped ^= True
+                    return True
+                self.pressed_direction = None
+
+                if not self.is_wall:
+                    # eat
+                    tracker.move_push(self.MoveRecord(self, next_pos[0], next_pos[1], next_pos[3]))
+                    self.pressed_direction = direction
+                    if next_obj._eaten_by(self, new_direction, tracker):
+                        if self_flipped:
+                            self.is_flipped ^= True
+                        return True
+                    tracker.pop_last()
+                    self.pressed_direction = None
+
+                # clean up
+                if self_flipped:
+                    self.is_flipped ^= True
 
             # possess
             if is_first_movement:
@@ -236,7 +257,7 @@ class Reference:
         enter is special, because after ONE push or eat, the pusher or eater's pos is defined,
         but this is not the case for enter: the enterer might enter MULTIPLE times at the same time
         """
-        if self.pressed_direction is not None:
+        if self.pressed_direction is not None and self.pressed_direction != direction:
             return False
 
         enter_pos = directions.enter_pos(direction, self.room.width, self.room.height, self.is_flipped, offset)
@@ -248,7 +269,7 @@ class Reference:
             return False
 
         # this is part of the preparation for the recursion
-        # we move this part here because we need the enterer_direction to decide whether we need to early return
+        # we move this part here because we need the enterer_direction to decide whether we need to do an early return
         if directions.is_vertical(direction):
             new_offset = offset * self.room.width - enter_obj.pos[0]
         else:
@@ -270,45 +291,48 @@ class Reference:
             return False
 
         # recurse start here
-        # prepare
-        if self.is_flipped:
-            enterer.is_flipped ^= True
-        enterer_flipped = self.is_flipped
+        # possessable walls are only possessable, not pushable or something else
+        if not enter_obj.is_wall:
+            # prepare
+            if self.is_flipped:
+                enterer.is_flipped ^= True
+            enterer_flipped = self.is_flipped
+            tracker.move_enter(self.MoveRecord(self, self.parent_room, self.pos, False))  # we record this so that when we are wiping pressed_direction, we know we need to wipe it for "self" too
+            self.pressed_direction = direction
 
-        tracker.move_enter(self.MoveRecord(self, self.parent_room, self.pos, False))  # we record this so that when we are wiping pressed_direction, we know we need to wipe it for "self" too
-        self.pressed_direction = direction
+            # push
+            tracker.move_enter(self.MoveRecord(enterer, self.room, enter_pos, enterer_already_should_flip ^ self.is_flipped))
+            enterer.pressed_direction = enterer_direction
+            if enter_obj._pushed(enterer_direction, tracker, False):
+                if enterer_flipped:
+                    enterer.is_flipped ^= True
+                return True
+            tracker.pop_last()
+            enterer.pressed_direction = None
 
-        # push
-        tracker.move_enter(self.MoveRecord(enterer, self.room, enter_pos, enterer_already_should_flip ^ self.is_flipped))
-        enterer.pressed_direction = enterer_direction
-        if enter_obj._pushed(enterer_direction, tracker, False):
+            # enter
+            if enter_obj._entered_by(enterer, enterer_direction, tracker, new_offset, enterer_already_should_flip ^ self.is_flipped, is_first_movement):
+                if enterer_flipped:
+                    enterer.is_flipped ^= True
+                return True
+
+            if not enterer.is_wall:
+                # eat
+                tracker.move_enter(self.MoveRecord(enterer, self.room, enter_pos, enterer_already_should_flip ^ self.is_flipped))
+                # self.pressed_direction = enterer_direction  TODO: check whether we should set "self.pressed_direction" or "enterer.pressed_direction"
+                enterer.pressed_direction = enterer_direction
+                if enter_obj._eaten_by(enterer, enterer_direction, tracker):
+                    if enterer_flipped:
+                        enterer.is_flipped ^= True
+                    return True
+                tracker.pop_last()
+                enterer.pressed_direction = None
+
+            # failed, clean up
+            self.pressed_direction = None
+            tracker.pop_last()
             if enterer_flipped:
                 enterer.is_flipped ^= True
-            return True
-        tracker.pop_last()
-        enterer.pressed_direction = None
-
-        # enter
-        if enter_obj._entered_by(enterer, enterer_direction, tracker, new_offset, enterer_already_should_flip ^ self.is_flipped, is_first_movement):
-            if enterer_flipped:
-                enterer.is_flipped ^= True
-            return True
-
-        # eat
-        tracker.move_enter(self.MoveRecord(enterer, self.room, enter_pos, enterer_already_should_flip ^ self.is_flipped))
-        self.pressed_direction = enterer_direction
-        if enter_obj._eaten_by(enterer, enterer_direction, tracker):
-            if enterer_flipped:
-                enterer.is_flipped ^= True
-            return True
-        tracker.pop_last()
-        enterer.pressed_direction = None
-
-        # failed, clean up
-        tracker.pop_last()
-        self.pressed_direction = None
-        if enterer_flipped:
-            enterer.is_flipped ^= True
 
         # possess
         if is_first_movement:
@@ -356,6 +380,11 @@ class Reference:
         we need to check if the enter object is pushable or enterable in the reversed direction
         refer to eat.txt and eat_2.txt
         """
+
+        # possessable walls are only possessable, not pushable or something else
+        if eater_enter_obj.is_wall:
+            return False
+
         # recurse start here
         # prepare
         if eater.is_flipped and directions.is_horizontal(reversed_direction):
@@ -366,14 +395,16 @@ class Reference:
             self.is_flipped ^= True
         self_flipped = eater.is_flipped
 
+        # push
         tracker.move_eat(self.MoveRecord(self, eater.room, eater_enter_pos, eater.is_flipped))
-        self.pressed_direction = direction
+        self.pressed_direction = enter_obj_direction
         if eater_enter_obj._pushed(enter_obj_direction, tracker):
             if self_flipped:
                 self.is_flipped ^= True
             return True
         tracker.pop_last()
         self.pressed_direction = None
+        # enter
         if eater_enter_obj._entered_by(self, enter_obj_direction, tracker, 0.5, eater.is_flipped):
             if self_flipped:
                 self.is_flipped ^= True

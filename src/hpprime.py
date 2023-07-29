@@ -5,7 +5,7 @@ from typing import Union, Optional
 import re
 import tkinter as tk
 
-LOGGING = True
+LOGGING = False
 SCREEN_SIZE = (320, 240)
 
 window: Optional[pygame.Surface] = None
