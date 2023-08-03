@@ -16,14 +16,14 @@ def test_level(level: Level, solution: str):
         if action_name == "U":
             direction = directions.UP
         elif action_name == "L":
-            if not level.players[0].is_flipped:
+            if not level.players[0].is_view_flipped:
                 direction = directions.LEFT
             else:
                 direction = directions.RIGHT
         elif action_name == "D":
             direction = directions.DOWN
         elif action_name == "R":
-            if not level.players[0].is_flipped:
+            if not level.players[0].is_view_flipped:
                 direction = directions.RIGHT
             else:
                 direction = directions.LEFT

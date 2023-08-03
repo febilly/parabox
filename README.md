@@ -1,6 +1,6 @@
 This is a (incomplete) clone of Patrick's Parabox for the calculator HP Prime.
 ![Screenshot](doc/screenshot.png)
-This is a work in progress. Currently only the first 15 chapters from the original game are supported, and the first 12 chapters are bug-free.
+This is a work in progress. Currently only the first 15 chapters from the original game are supported.
 
 # Installation:
 - Download this repository and install `Patrick's Parabox`

@@ -5,11 +5,12 @@ MAX_ENTRIES = 1000
 class UndoRecord:
     class Movement:
         # def __init__(self, reference: reference.Reference, parent_room, pos: tuple[int, int]):
-        def __init__(self, reference, parent_room, pos: tuple[int, int], is_flipped: bool, is_player: bool):
+        def __init__(self, reference, parent_room, pos: tuple[int, int], is_flipped: bool, is_view_flipped: bool, is_player: bool):
             self.reference = reference
             self.parent_room = parent_room
             self.pos = pos
             self.is_flipped = is_flipped
+            self.is_view_flipped = is_view_flipped
             self.is_player = is_player
 
     class Record:
@@ -25,7 +26,7 @@ class UndoRecord:
             record = cls()
             for move_record in move_records:
                 reference = move_record.reference
-                record.append(UndoRecord.Movement(reference, reference.parent_room, reference.pos, reference.is_flipped, reference.is_player))
+                record.append(UndoRecord.Movement(reference, reference.parent_room, reference.pos, reference.is_flipped, reference.is_view_flipped, reference.is_player))
             return record
 
         @classmethod
@@ -34,9 +35,9 @@ class UndoRecord:
             record = cls()
             for reference_list in references.values():
                 for reference in reference_list:
-                    record.append(UndoRecord.Movement(reference, reference.parent_room, reference.pos, reference.is_flipped, reference.is_player))
+                    record.append(UndoRecord.Movement(reference, reference.parent_room, reference.pos, reference.is_flipped, reference.is_view_flipped, reference.is_player))
             for reference in possessable_walls:
-                record.append(UndoRecord.Movement(reference, reference.parent_room, reference.pos, reference.is_flipped, reference.is_player))
+                record.append(UndoRecord.Movement(reference, reference.parent_room, reference.pos, reference.is_flipped, reference.is_view_flipped, reference.is_player))
             return record
 
         def undo(self, level_players: dict):
@@ -55,6 +56,7 @@ class UndoRecord:
                 new_map = reference.parent_room.reference_map
                 new_map[new_pos[0]][new_pos[1]] = reference
                 reference.is_flipped = movement.is_flipped
+                reference.is_view_flipped = movement.is_view_flipped
                 reference.is_player = movement.is_player
                 if movement.is_player:
                     level_players[reference.playerorder] = reference

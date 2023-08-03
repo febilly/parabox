@@ -23,6 +23,7 @@ class Reference:
         self.queried_poses                                    = []  # (pos, direction)
         self.pressed_direction = None
         self.is_flipped = is_flipped  # whether this reference is flipped relative to its parent room
+        self.is_view_flipped = False  # when rendering and focused on this ref, whether the view is flipped
         self.is_wall = is_wall
         pass
 
@@ -141,8 +142,9 @@ class Reference:
                 old_map[old_pos[0]][old_pos[1]] = None
 
             # add reference to new place
-            if not (reference.is_player and reference.parent_room == record.new_parent_room):
-                reference.is_flipped ^= record.is_flipped
+            reference.is_flipped ^= record.is_flipped
+            if not reference.parent_room == record.new_parent_room:
+                reference.is_view_flipped ^= record.is_flipped
             reference.parent_room = record.new_parent_room
             new_pos = record.new_pos
             reference.pos = new_pos

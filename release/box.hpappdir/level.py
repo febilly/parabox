@@ -280,7 +280,7 @@ class Level:
         hpprime.dimgrob(base_graphic, 320, 240, background_color)
         render_pos = ((320 - size[0]) // 2, (240 - size[1]) // 2)
         virtual_graphic = VirtualGraphic(base_graphic, render_pos[0], render_pos[1], size[0], size[1])
-        room.render(virtual_graphic, ((0, 0), (size[0] - 1, size[1] - 1)), player_to_focus.is_flipped)
+        room.render(virtual_graphic, ((0, 0), (size[0] - 1, size[1] - 1)), player_to_focus.is_view_flipped)
         hpprime.blit(0, 0, 0, base_graphic)
 
     def is_completed(self):
@@ -309,14 +309,14 @@ class Level:
             if action == actions.UP:
                 self.push_players(directions.UP, self.undo_record)
             elif action == actions.LEFT:
-                if not self.players[0].is_flipped:
+                if not self.players[0].is_view_flipped:
                     self.push_players(directions.LEFT, self.undo_record)
                 else:
                     self.push_players(directions.RIGHT, self.undo_record)
             elif action == actions.DOWN:
                 self.push_players(directions.DOWN, self.undo_record)
             elif action == actions.RIGHT:
-                if not self.players[0].is_flipped:
+                if not self.players[0].is_view_flipped:
                     self.push_players(directions.RIGHT, self.undo_record)
                 else:
                     self.push_players(directions.LEFT, self.undo_record)
