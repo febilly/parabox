@@ -20,7 +20,7 @@ class Reference:
         self.playerorder = playerorder
         self.parent_room            = None
         self.room            = None
-        self.queried_poses                                    = []  # (pos, direction)
+        self.queried_directions            = []  # (pos, direction)
         self.pressed_direction = None
         self.is_flipped = is_flipped  # whether this reference is flipped relative to its parent room
         self.is_view_flipped = False  # when rendering and focused on this ref, whether the view is flipped
@@ -34,7 +34,7 @@ class Reference:
         the offset is where in the next ref should this ref enter
         is_flipped == next_obj.is_flipped_current xor self.is_flipped_current
         """
-        if (self.pos, direction) in self.queried_poses:
+        if direction in self.queried_directions:
             return object_types.INFINITY
         next_pos = directions.next_pos(self.pos, direction)
         if self.parent_room is None:
@@ -47,7 +47,7 @@ class Reference:
             # return the next pos of self.parent_room.reference
             if self.parent_room.exit_reference is None:
                 return object_types.WALL
-            self.queried_poses.append((self.pos, direction))
+            self.queried_directions.append(direction)
             tested.append(self)
             # calculate the new offset after exiting the block
             if direction == directions.UP or direction == directions.DOWN:
@@ -71,7 +71,7 @@ class Reference:
         tested                    = []
         result = self._get_next_pos(direction, tested, can_exit)
         for reference in tested:
-            reference.queried_poses = []
+            reference.queried_directions = []
         return result
 
     def get_next(self, direction     , can_exit=True):
@@ -251,7 +251,7 @@ class Reference:
             record.reference.pressed_direction = None
         return result
 
-    def _entered_by(self, enterer             , direction     , tracker             , offset=0.5, enterer_already_should_flip=False, is_first_movement=False):
+    def _entered_by(self, enterer             , direction     , tracker             , offset=0.5, enterer_already_should_flip=False, is_first_movement=False, last_enter_info=None):
         """
         check if other objects can enter "self" object in the given direction
         (direction is where the "other object" want to go)
@@ -259,6 +259,14 @@ class Reference:
         enter is special, because after ONE push or eat, the pusher or eater's pos is defined,
         but this is not the case for enter: the enterer might enter MULTIPLE times at the same time
         """
+        class EnterInfo:
+            def __init__(self, parent_room, enter_pos):
+                self.parent_room = parent_room
+                self.enter_pos = enter_pos
+
+            def __eq__(self, other):
+                return self.parent_room == other.parent_room and self.enter_pos == other.enter_pos
+
         if self.pressed_direction is not None and self.pressed_direction != direction:
             return False
 
@@ -313,10 +321,12 @@ class Reference:
             enterer.pressed_direction = None
 
             # enter
-            if enter_obj._entered_by(enterer, enterer_direction, tracker, new_offset, enterer_already_should_flip ^ self.is_flipped, is_first_movement):
-                if enterer_flipped:
-                    enterer.is_flipped ^= True
-                return True
+            this_enter_info = EnterInfo(self.room, enter_pos)
+            if last_enter_info is None or last_enter_info != this_enter_info:
+                if enter_obj._entered_by(enterer, enterer_direction, tracker, new_offset, enterer_already_should_flip ^ self.is_flipped, is_first_movement, this_enter_info):
+                    if enterer_flipped:
+                        enterer.is_flipped ^= True
+                    return True
 
             if not enterer.is_wall:
                 # eat
