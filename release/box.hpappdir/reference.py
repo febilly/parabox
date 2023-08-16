@@ -10,11 +10,12 @@ class Reference:
     players and possessable walls are references, too
     """
 
-    def __init__(self, id, pos, is_room_generated, exit_block, is_player, is_possessable, playerorder, is_flipped, is_wall):
+    def __init__(self, id, pos, is_room_generated, is_exit_block, is_player, is_possessable, playerorder, is_flipped,
+                 is_wall, float_in_space, is_infexit, infexit_num, is_infenter, infenter_num, infenter_from_id):
         self.id = id
         self.pos                  = pos
         self.is_room_generated = is_room_generated
-        self.exit_block = exit_block
+        self.is_exit_block = is_exit_block
         self.is_player = is_player
         self.is_possessable = is_possessable
         self.playerorder = playerorder
@@ -25,7 +26,65 @@ class Reference:
         self.is_flipped = is_flipped  # whether this reference is flipped relative to its parent room
         self.is_view_flipped = False  # when rendering and focused on this ref, whether the view is flipped
         self.is_wall = is_wall
+        self.level = None
+        self.float_in_space = float_in_space
+
+        self.is_infexit = is_infexit
+        self.infexit_num = infexit_num  # always 1 less than the number of displayed ¡Þ
+        self.is_infenter = is_infenter
+        self.infenter_num = infenter_num  # always 1 less than the number of displayed ¦Å
+
+        # self.infexit_to_references: dict[int, "Reference"] = {}  # degree -> reference
+        self.infenter_from_id = infenter_from_id
+        # self.infenter_to_rooms: dict[int, room] = {}  # degree -> room
         pass
+
+    def is_nonenterable(self):  # with golden outline
+        return self.is_infexit or (self.parent_room is not None and self.parent_room.is_void)
+
+    def get_infexit_reference(self, degree):
+        if self.id in self.level.infexit_references and degree in self.level.infexit_references[self.id]:
+            return self.level.infexit_references[self.id][degree]
+        else:
+            # create a new void room containing the infexit
+            new_void_room_id = max(self.level.rooms) + 1
+            new_void_room = room.Room(7, 7, new_void_room_id, (0, 0, 0.8), False, True, True)
+            # self.level.rooms[new_void_room_id] = new_void_room  # don't add generated void room to the level.rooms
+            new_infexit = Reference(self.id, (3, 3), False, False, False, False, 0, False, False, False, True, degree, False, 0, 0)
+            new_infexit.level = self.level
+            new_infexit.room = self.room
+            new_infexit.parent_room = new_void_room
+            new_void_room.reference_map[3][3] = new_infexit
+            if self.id in self.level.infexit_references:
+                self.level.infexit_references[self.id][degree] = new_infexit
+            else:
+                self.level.infexit_references[self.id] = {degree: new_infexit}
+            return new_infexit
+
+    def get_infenter_reference(self, degree):
+        if self.id in self.level.infenter_references and degree in self.level.infenter_references[self.id]:
+            return self.level.infenter_references[self.id][degree]
+        else:
+            # create a new void room containing the infenter
+            new_epsilon_room_id = max(self.level.rooms) + 1
+            new_epsilon_room = room.Room(5, 5, new_epsilon_room_id, (0.25, 0.83, 0.82), False, True, False)
+            new_epsilon_reference = Reference(new_epsilon_room_id, (3, 3), True, False, False, False, 0, False, False, False, False, 0, True, degree, 0)
+            new_epsilon_room.exit_reference = new_epsilon_reference
+            new_epsilon_reference.room = new_epsilon_room
+            new_epsilon_reference.level = self.level
+            # self.level.rooms[new_epsilon_room_id] = new_epsilon_room  # don't add generated epsilon things to the level.references
+            # self.level.references[new_epsilon_room_id].append(new_epsilon_reference)  # don't add generated epsilon things to the level.references
+
+            new_void_room_id = max(self.level.rooms) + 1
+            new_void_room = room.Room(7, 7, new_void_room_id, (0, 0, 0.8), False, True, True)
+            new_void_room.reference_map[3][3] = new_epsilon_reference
+            new_epsilon_reference.parent_room = new_void_room
+            new_void_room.reference_map[3][3] = new_epsilon_reference
+            if self.id in self.level.infenter_references:
+                self.level.infenter_references[self.id][degree] = new_epsilon_reference
+            else:
+                self.level.infenter_references[self.id] = {degree: new_epsilon_reference}
+            return new_epsilon_reference
 
     def _get_next_pos(self, direction     , tested                   , can_exit, offset=0.5, is_flipped=False):
         """
@@ -34,8 +93,6 @@ class Reference:
         the offset is where in the next ref should this ref enter
         is_flipped == next_obj.is_flipped_current xor self.is_flipped_current
         """
-        if direction in self.queried_directions:
-            return object_types.INFINITY
         next_pos = directions.next_pos(self.pos, direction)
         if self.parent_room is None:
             return object_types.INFINITY
@@ -45,24 +102,35 @@ class Reference:
             return object_types.WALL  # TODO: check this
         else:
             # return the next pos of self.parent_room.reference
-            if self.parent_room.exit_reference is None:
+            exit_reference = self.parent_room.exit_reference
+            if exit_reference is None:
                 return object_types.WALL
             self.queried_directions.append(direction)
             tested.append(self)
+
+            new_direction = directions.reverse(direction) if exit_reference.is_flipped and directions.is_horizontal(direction) else direction
+
+            if new_direction in exit_reference.queried_directions:
+                # infexit was triggered
+                # self is exiting from infexit instead of exit_reference
+                if self.is_infexit:
+                    next_degree = self.infexit_num + 1
+                else:
+                    next_degree = 0
+                infexit = self.get_infexit_reference(next_degree)
+                new_offset = 1 - offset if infexit.is_flipped and directions.is_vertical(direction) else offset
+                return infexit._get_next_pos(direction, tested, can_exit, new_offset, is_flipped)
+
             # calculate the new offset after exiting the block
             if direction == directions.UP or direction == directions.DOWN:
                 new_offset = (self.pos[0] + offset) / self.parent_room.width
             else:
                 new_offset = (self.pos[1] + offset) / self.parent_room.height
 
-            new_direction = direction
-            if self.parent_room.exit_reference.is_flipped:
-                if directions.is_vertical(direction):
-                    new_offset = 1 - new_offset
-                else:
-                    new_direction = directions.reverse(direction)
+            if exit_reference.is_flipped and directions.is_vertical(direction):
+                new_offset = 1 - new_offset
 
-            return self.parent_room.exit_reference._get_next_pos(new_direction, tested, can_exit, new_offset, is_flipped ^ self.parent_room.exit_reference.is_flipped)
+            return exit_reference._get_next_pos(new_direction, tested, can_exit, new_offset, is_flipped ^ self.parent_room.exit_reference.is_flipped)
 
     def get_next_pos(self, direction     , can_exit=True):
         """
@@ -122,7 +190,7 @@ class Reference:
             self.actions.pop()
             return self.records.pop()
 
-    def conduct_record(self, records                              , undo                        , level_players                        ):
+    def conduct_record(self, records                              , undo                        ):
         # find the cycle
         if records.count(records[-1]) < 2:
             records_to_conduct = records
@@ -135,6 +203,9 @@ class Reference:
         # conduct
         for record in records_to_conduct:
             reference = record.reference
+            if reference.float_in_space:
+                continue
+
             # remove reference from old place
             old_pos = reference.pos
             old_map = reference.parent_room.reference_map
@@ -152,7 +223,7 @@ class Reference:
             new_map[new_pos[0]][new_pos[1]] = reference
             if record.is_player is not None:
                 if record.is_player:
-                    level_players[reference.playerorder] = reference
+                    self.level.players[reference.playerorder] = reference
                 reference.is_player = record.is_player
 
     def _pushed(self, direction     , tracker             , is_first_movement=False):
@@ -207,24 +278,25 @@ class Reference:
                 tracker.pop_last()
                 self.pressed_direction = None
 
-                # enter
-                self.pressed_direction = direction
-                if next_obj._entered_by(self, new_direction, tracker, next_pos[2], next_pos[3], is_first_movement):
-                    if self_flipped:
-                        self.is_flipped ^= True
-                    return True
-                self.pressed_direction = None
-
-                if not self.is_wall:
-                    # eat
-                    tracker.move_push(self.MoveRecord(self, next_pos[0], next_pos[1], next_pos[3]))
+                if not next_obj.is_nonenterable():
+                    # enter
                     self.pressed_direction = direction
-                    if next_obj._eaten_by(self, new_direction, tracker):
+                    if next_obj._entered_by(self, new_direction, tracker, next_pos[2], next_pos[3], is_first_movement):
                         if self_flipped:
                             self.is_flipped ^= True
                         return True
-                    tracker.pop_last()
                     self.pressed_direction = None
+
+                    if not (self.is_wall or self.is_nonenterable()):
+                        # eat
+                        tracker.move_push(self.MoveRecord(self, next_pos[0], next_pos[1], next_pos[3]))
+                        self.pressed_direction = direction
+                        if next_obj._eaten_by(self, new_direction, tracker):
+                            if self_flipped:
+                                self.is_flipped ^= True
+                            return True
+                        tracker.pop_last()
+                        self.pressed_direction = None
 
                 # clean up
                 if self_flipped:
@@ -233,25 +305,26 @@ class Reference:
             # possess
             if is_first_movement:
                 self.pressed_direction = direction
-                if next_obj._possessed_by(self, tracker):
+                if next_obj._possessed_by(self, direction, tracker, next_pos[2]):
                     return True
                 self.pressed_direction = None
 
             return False
 
-    def pushed(self, direction     , _undo_record                        , level_players                        , dry_run=False):
+    def pushed(self, direction     , _undo_record                        , dry_run=False):
         """
         check if "self" object is pushable in the given direction
         """
         tracker = self.MoveTracker()
         result = self._pushed(direction, tracker, True)
         if result and not dry_run:
-            self.conduct_record(tracker.records, _undo_record, level_players)
+            self.conduct_record(tracker.records, _undo_record)
         for record in tracker.records:
             record.reference.pressed_direction = None
         return result
 
-    def _entered_by(self, enterer             , direction     , tracker             , offset=0.5, enterer_already_should_flip=False, is_first_movement=False, last_enter_info=None):
+    def _entered_by(self, enterer             , direction     , tracker             , outer_offset=0.5,
+                    enterer_already_should_flip=False, is_first_movement=False, infenter_degree=0):
         """
         check if other objects can enter "self" object in the given direction
         (direction is where the "other object" want to go)
@@ -260,17 +333,17 @@ class Reference:
         but this is not the case for enter: the enterer might enter MULTIPLE times at the same time
         """
         class EnterInfo:
-            def __init__(self, parent_room, enter_pos):
-                self.parent_room = parent_room
-                self.enter_pos = enter_pos
+            def __init__(self, room, outer_offset):
+                self.room = room
+                self.outer_offset = outer_offset
 
             def __eq__(self, other):
-                return self.parent_room == other.parent_room and self.enter_pos == other.enter_pos
+                return self.room == other.room and self.outer_offset == other.outer_offset
 
         if self.pressed_direction is not None and self.pressed_direction != direction:
             return False
 
-        enter_pos = directions.enter_pos(direction, self.room.width, self.room.height, self.is_flipped, offset)
+        enter_pos = directions.enter_pos(direction, self.room.width, self.room.height, self.is_flipped, outer_offset)
         enter_obj = self.room.get(enter_pos)
         if enter_obj == object_types.GROUND:
             tracker.move_enter(self.MoveRecord(enterer, self.room, enter_pos, enterer_already_should_flip ^ self.is_flipped))
@@ -278,22 +351,24 @@ class Reference:
         if enter_obj == object_types.WALL:
             return False
 
-        # this is part of the preparation for the recursion
-        # we move this part here because we need the enterer_direction to decide whether we need to do an early return
-        if directions.is_vertical(direction):
-            new_offset = offset * self.room.width - enter_obj.pos[0]
-        else:
-            new_offset = offset * self.room.height - enter_obj.pos[1]
-
         # enterer_direction is the direction that the enterer will go after entering
         if self.is_flipped:
             if directions.is_vertical(direction):
                 enterer_direction = direction
-                new_offset = 1 - new_offset
+                inner_offset = 1 - outer_offset
             else:
                 enterer_direction = directions.reverse(direction)
+                inner_offset = outer_offset
         else:
             enterer_direction = direction
+            inner_offset = outer_offset
+
+        # this is part of the preparation for the recursion
+        # we move this part here because we need the enterer_direction to decide whether we need to do an early return
+        if directions.is_vertical(direction):
+            new_offset = inner_offset * self.room.width - enter_obj.pos[0]
+        else:
+            new_offset = inner_offset * self.room.height - enter_obj.pos[1]
 
         # this is the "early return" said above
         if enter_obj.pressed_direction is not None and enter_obj.pressed_direction != enterer_direction:
@@ -320,25 +395,35 @@ class Reference:
             tracker.pop_last()
             enterer.pressed_direction = None
 
-            # enter
-            this_enter_info = EnterInfo(self.room, enter_pos)
-            if last_enter_info is None or last_enter_info != this_enter_info:
-                if enter_obj._entered_by(enterer, enterer_direction, tracker, new_offset, enterer_already_should_flip ^ self.is_flipped, is_first_movement, this_enter_info):
-                    if enterer_flipped:
-                        enterer.is_flipped ^= True
-                    return True
+            if not enter_obj.is_nonenterable():
+                # enter
+                this_enter_info = EnterInfo(self.room, outer_offset)
+                next_enter_info = EnterInfo(enter_obj.room, new_offset)
+                if this_enter_info == next_enter_info:
+                    # self is being infentered
+                    # enterer is enter infenter instead of self
+                    infenter = self.get_infenter_reference(infenter_degree)
+                    if infenter._entered_by(enterer, enterer_direction, tracker, new_offset, enterer_already_should_flip, is_first_movement, infenter_degree + 1):
+                        if enterer_flipped:
+                            enterer.is_flipped ^= True
+                        return True
+                else:
+                    if enter_obj._entered_by(enterer, enterer_direction, tracker, new_offset, enterer_already_should_flip ^ self.is_flipped, is_first_movement, infenter_degree):
+                        if enterer_flipped:
+                            enterer.is_flipped ^= True
+                        return True
 
-            if not enterer.is_wall:
-                # eat
-                tracker.move_enter(self.MoveRecord(enterer, self.room, enter_pos, enterer_already_should_flip ^ self.is_flipped))
-                # self.pressed_direction = enterer_direction  TODO: check whether we should set "self.pressed_direction" or "enterer.pressed_direction"
-                enterer.pressed_direction = enterer_direction
-                if enter_obj._eaten_by(enterer, enterer_direction, tracker):
-                    if enterer_flipped:
-                        enterer.is_flipped ^= True
-                    return True
-                tracker.pop_last()
-                enterer.pressed_direction = None
+                if not (enterer.is_wall or enterer.is_nonenterable()):
+                    # eat
+                    tracker.move_enter(self.MoveRecord(enterer, self.room, enter_pos, enterer_already_should_flip ^ self.is_flipped))
+                    # self.pressed_direction = enterer_direction  TODO: check whether we should set "self.pressed_direction" or "enterer.pressed_direction"
+                    enterer.pressed_direction = enterer_direction
+                    if enter_obj._eaten_by(enterer, enterer_direction, tracker):
+                        if enterer_flipped:
+                            enterer.is_flipped ^= True
+                        return True
+                    tracker.pop_last()
+                    enterer.pressed_direction = None
 
             # failed, clean up
             self.pressed_direction = None
@@ -349,14 +434,14 @@ class Reference:
         # possess
         if is_first_movement:
             self.pressed_direction = direction
-            if enter_obj._possessed_by(enterer, tracker):
+            if enter_obj._possessed_by(enterer, direction, tracker, new_offset):
                 return True
             self.pressed_direction = None
 
         return False
 
 
-    def entered_by(self, enterer             , direction     , _undo_record                        , level_players                        , offset=0.5, dry_run=False):
+    def entered_by(self, enterer             , direction     , _undo_record                        , offset=0.5, dry_run=False):
         """
         check if other objects can enter "self" object in the given direction
         (direction is where the "other object" want to go)
@@ -364,7 +449,7 @@ class Reference:
         tracker = self.MoveTracker()
         result = self._entered_by(enterer, direction, tracker, offset)
         if result and not dry_run:
-            self.conduct_record(tracker.records, _undo_record, level_players)
+            self.conduct_record(tracker.records, _undo_record)
         for record in tracker.records:
             record.reference.pressed_direction = None
         return result
@@ -416,11 +501,26 @@ class Reference:
             return True
         tracker.pop_last()
         self.pressed_direction = None
-        # enter
-        if eater_enter_obj._entered_by(self, enter_obj_direction, tracker, 0.5, eater.is_flipped):
-            if self_flipped:
-                self.is_flipped ^= True
-            return True
+
+        if not eater_enter_obj.is_nonenterable():
+            if eater.room == eater_enter_obj.room:
+                # self is being infentered
+                # enterer is enter infenter instead of self
+                if eater.is_infenter:
+                    next_degree = eater.infenter_num + 1
+                else:
+                    next_degree = 0
+                infenter = eater.get_infenter_reference(next_degree)
+                if infenter._entered_by(self, enter_obj_direction, tracker, 0.5, eater.is_flipped, False, 1):
+                    if self_flipped:
+                        self.is_flipped ^= True
+                    return True
+
+            # enter
+            if eater_enter_obj._entered_by(self, enter_obj_direction, tracker, 0.5, eater.is_flipped, False):
+                if self_flipped:
+                    self.is_flipped ^= True
+                return True
         # "self" block can not eat eater_enter_obj
         # so no need to check it
         # otherwise, it will be eater block entering the "self" block, instead of eating "self" block
@@ -429,7 +529,7 @@ class Reference:
 
         return False
 
-    def eaten_by(self, eater             , direction     , _undo_record                        , level_players                        , dry_run=False):
+    def eaten_by(self, eater             , direction     , _undo_record                        , dry_run=False):
         """
         check if "self" objects can be eaten by the "eater" object in the given direction
         (direction is where the "eater" object want to go)
@@ -438,13 +538,13 @@ class Reference:
         tracker = self.MoveTracker()
         result = self._entered_by(eater, direction, tracker)
         if result and not dry_run:
-            self.conduct_record(tracker.records, _undo_record, level_players)
+            self.conduct_record(tracker.records, _undo_record)
         for record in tracker.records:
             record.reference.pressed_direction = None
         return result
 
 
-    def _possessed_by(self, ghost_holder             , tracker             ):
+    def _possessed_by(self, ghost_holder             , direction     , tracker             , outer_offset=0.5):
         """
         check if "self" objects can be possessed by the "ghost_holder" object in the given direction
         (direction is where the "ghost_holder" object want to go)
@@ -452,28 +552,52 @@ class Reference:
         """
 
         # precheck, check if ghost_holder is player and if self is possessable
-        if not self.is_possessable or self.is_player:
+        if not ghost_holder.is_player or self.is_player:
             return False
-        if not ghost_holder.is_player:
+        if self.is_possessable:
+            tracker.move_possess(self.MoveRecord(ghost_holder, ghost_holder.parent_room, ghost_holder.pos, False, False))
+            tracker.move_possess(self.MoveRecord(self, self.parent_room, self.pos, False, True))
+            return True
+
+        enter_pos = directions.enter_pos(direction, self.room.width, self.room.height, self.is_flipped, outer_offset)
+        enter_obj = self.room.get(enter_pos)
+        if not isinstance(enter_obj, Reference):
+            return False
+        if enter_obj == self and enter_pos == self.pos:
             return False
 
-        # check passed
-        tracker.move_possess(self.MoveRecord(ghost_holder, ghost_holder.parent_room, ghost_holder.pos, False, False))
-        tracker.move_possess(self.MoveRecord(self, self.parent_room, self.pos, False, True))
+        # enterer_direction is the direction that the enterer will go after entering
+        if self.is_flipped:
+            if directions.is_vertical(direction):
+                enterer_direction = direction
+                inner_offset = 1 - outer_offset
+            else:
+                enterer_direction = directions.reverse(direction)
+                inner_offset = outer_offset
+        else:
+            enterer_direction = direction
+            inner_offset = outer_offset
 
-        return True
+        # this is part of the preparation for the recursion
+        # we move this part here because we need the enterer_direction to decide whether we need to do an early return
+        if directions.is_vertical(direction):
+            new_offset = inner_offset * self.room.width - enter_obj.pos[0]
+        else:
+            new_offset = inner_offset * self.room.height - enter_obj.pos[1]
+
+        return enter_obj._possessed_by(ghost_holder, enterer_direction, tracker, new_offset)
 
 
-    def possessed_by(self, ghost_holder             , _undo_record                        , level_players                        , dry_run=False):
+    def possessed_by(self, ghost_holder             , direction     , _undo_record                        , dry_run=False):
         """
         check if "self" objects can be possessed by the "ghost_holder" object in the given direction
         (direction is where the "ghost_holder" object want to go)
         suppose the ghost_holder is going to go to the position of "self" object
         """
         tracker = self.MoveTracker()
-        result = self._possessed_by(ghost_holder, tracker)
+        result = self._possessed_by(ghost_holder, direction, tracker, 0.5)
         if result and not dry_run:
-            self.conduct_record(tracker.records, _undo_record, level_players)
+            self.conduct_record(tracker.records, _undo_record)
         for record in tracker.records:
             record.reference.pressed_direction = None
         return result

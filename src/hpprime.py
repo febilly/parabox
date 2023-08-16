@@ -199,7 +199,7 @@ def eval(string):
             root.destroy()
 
         root = tk.Tk()
-        root.title('选择窗口')
+        root.title('Choose one')
 
         # 在窗口内部显示标题
         title_label = tk.Label(root, text=title, font=('Arial', 16))

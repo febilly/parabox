@@ -16,7 +16,9 @@ class UndoRecord:
     class Record:
         def __init__(self):
             self.movements                            = []
-        
+            self.infexit_references                  = None
+            self.infenter_references                  = None
+
         def append(self, movement                       ):
             self.movements.append(movement)
 
@@ -31,18 +33,26 @@ class UndoRecord:
 
         @classmethod
         # def record_all(cls, references: dict[int, list[reference.Reference]], possessable_walls: list[reference.Reference]):
-        def record_all(cls, references, possessable_walls):
+        def record_all(cls, references                 , possessable_walls      , infexit_references                 , infenter_references                 ):
             record = cls()
             for reference_list in references.values():
                 for reference in reference_list:
                     record.append(UndoRecord.Movement(reference, reference.parent_room, reference.pos, reference.is_flipped, reference.is_view_flipped, reference.is_player))
             for reference in possessable_walls:
                 record.append(UndoRecord.Movement(reference, reference.parent_room, reference.pos, reference.is_flipped, reference.is_view_flipped, reference.is_player))
+            for reference_id in infexit_references:
+                for reference in infexit_references[reference_id].values():
+                    record.append(UndoRecord.Movement(reference, reference.parent_room, reference.pos, reference.is_flipped, reference.is_view_flipped, reference.is_player))
+            record.infexit_references = {key: val.copy() for key, val in infexit_references.items()}
+            record.infenter_references = {key: val.copy() for key, val in infenter_references.items()}
             return record
 
-        def undo(self, level_players      ):
+        def undo(self, level_players      , infexit_references                 , infenter_references                 ):
             for movement in self.movements:
                 reference = movement.reference
+                if reference.float_in_space:
+                    continue
+
                 # remove reference from old place
                 old_pos = reference.pos
                 old_map = reference.parent_room.reference_map
@@ -61,6 +71,14 @@ class UndoRecord:
                 if movement.is_player:
                     level_players[reference.playerorder] = reference
 
+            if self.infexit_references is not None:
+                # we can't just use "=" here because we want to copy the lists to the Level.infexit_references
+                infexit_references.clear()
+                infexit_references.update({key: val.copy() for key, val in self.infexit_references.items()})
+            if self.infenter_references is not None:
+                infenter_references.clear()
+                infenter_references.update({key: val.copy() for key, val in self.infenter_references.items()})
+
 
     def __init__(self):
         self.undo_stack                          = []
@@ -70,7 +88,6 @@ class UndoRecord:
             self.undo_stack.pop(0)
         self.undo_stack.append(record)
         
-    def undo(self, level_players      ):
-        if len(self.undo_stack) == 0:
-            return
-        self.undo_stack.pop().undo(level_players)
+    def undo(self, level_players      , infexit_references                 , infenter_references                 ):
+        if len(self.undo_stack) > 0:
+            self.undo_stack.pop().undo(level_players, infexit_references, infenter_references)

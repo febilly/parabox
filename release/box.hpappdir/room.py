@@ -1,6 +1,4 @@
-import hpprime
 import utils
-from graphic_splitter import GraphicSplitter
 from virtual_graphic import VirtualGraphic
 import reference
 import object_types
@@ -8,13 +6,14 @@ import button
 
 
 class Room:
-    def __init__(self, width, height, id, color       , fill_with_blocks=False, not_block=False):
+    def __init__(self, width, height, id, color       , fill_with_blocks, not_block, is_void):
         self.width = width
         self.height = height
         self.id = id
-        self.color = color
+        self.color = color  # (hue, saturation, value)
         self.fill_with_blocks = fill_with_blocks
         self.not_block = not_block  # to make the root room render even if it is surrounded by walls
+        self.is_void = is_void
         self.is_root_room = False
         self.static_is_surrounded = None
         self.exit_reference                      = None
@@ -34,10 +33,12 @@ class Room:
                              area[0][1] + max((y + 1) * size[1] // self.height - 1, 0))
         return new_pos_left_bottom, new_pos_right_top
 
-    def render(self, virtual_graphic                , area                                         , render_as_flipped      =False):
+    def render(self, virtual_graphic                , area                                         ,
+               render_as_flipped       = False):
         """
         area: (left_bottom, right_top), both are (x, y)
         """
+
         # print("rendering room {}, render size: {} x {}".format(self.id, size[0], size[1]))
 
         def is_surrounded():
@@ -93,12 +94,21 @@ class Room:
                             virtual_graphic.draw_empty_box_area(inner_area, 0)
                         else:
                             virtual_graphic.draw_filled_box_area(inner_area, wall_color_int)
-                        if not self.reference_map[x][y].exit_block:
-                            virtual_graphic.draw_filled_box_area(inner_area, 0x80ffffff, 0)
-                        if self.reference_map[x][y].is_player:
+
+                        if inner_reference.is_player:
                             virtual_graphic.draw_tile_area("Player", inner_area)
-                        if self.reference_map[x][y].is_possessable and not self.reference_map[x][y].is_player:
+                        if inner_reference.is_possessable and not self.reference_map[x][y].is_player:
                             virtual_graphic.draw_tile_area("Possessable", inner_area)
+                        if inner_reference.is_infexit:
+                            virtual_graphic.draw_filled_box_area(inner_area, 0xa0000000)
+                            virtual_graphic.draw_tile_area("Infinity", inner_area)
+                        if inner_reference.is_infenter:
+                            virtual_graphic.draw_tile_area("Epsilon", inner_area)
+
+                        if not (inner_reference.is_exit_block or inner_reference.is_infexit):
+                            virtual_graphic.draw_filled_box_area(inner_area, 0x80ffffff, 0)
+                        if inner_reference.is_nonenterable() and not inner_reference.is_player:
+                            virtual_graphic.draw_empty_box_area(inner_area, 0xffe700)
 
             for button in self.buttons:
                 render_x = self.width - button.pos[0] - 1 if render_as_flipped else button.pos[0]
@@ -106,9 +116,10 @@ class Room:
                 inner_area = self.sub_area(area, render_x, self.height - render_y - 1)
                 button.render(inner_area, virtual_graphic, self.reference_map)
 
-            virtual_graphic.draw_empty_box_area(area, 0)
-
-
+            if self.exit_reference is None or not self.exit_reference.is_nonenterable():
+                virtual_graphic.draw_empty_box_area(area, 0)
+            else:
+                virtual_graphic.draw_empty_box_area(area, 0xffe700)
 
     def is_in_bound(self, pos):
         return 0 <= pos[0] < self.width and 0 <= pos[1] < self.height
@@ -123,7 +134,7 @@ class Room:
             return object_types.WALL
         else:
             return object_types.GROUND
-    
+
     def is_completed(self):
         for button in self.buttons:
             if not button.is_done(self.reference_map):

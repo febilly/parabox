@@ -14,8 +14,10 @@ from palettes import Palettes
 class Level:
     def __init__(self, string: str, palette_index=-1):
         self.rooms: dict[int, Room] = {}
-        self.references: dict[int, list[Reference]] = {}  # not including possessable walls
+        self.references: dict[int, list[Reference]] = {}  # not including possessable walls and infs
         self.possessable_walls: list[Reference] = []
+        self.infexit_references: dict[int, dict[int, Reference]] = {}  # the first index is the room id, the second is the infexit number
+        self.infenter_references: dict[int, dict[int, Reference]] = {}  # the first index is the room id, the second is the infenter number
         self.graphic_mapping: dict[int, int] = {}
         self.graphic_splitter: GraphicSplitter = None
         self.players: dict[int, Reference] = {}
@@ -24,13 +26,25 @@ class Level:
         self.undo_record = UndoRecord()
         self.palette_index = palette_index
         self.load(string)
-        self.init_state = UndoRecord.Record.record_all(self.references, self.possessable_walls)
+        self.init_state = UndoRecord.Record.record_all(self.references, self.possessable_walls, self.infexit_references, self.infenter_references)
 
     def add_reference(self, index: int, reference: Reference):
-        if index in self.references:
-            self.references[index].append(reference)
-        else:
-            self.references[index] = [reference]
+        if reference.is_infexit:
+            if index in self.infexit_references:
+                self.infexit_references[index][reference.infexit_num] = reference
+            else:
+                self.infexit_references[index] = {reference.infexit_num: reference}
+        if reference.is_infenter:
+            from_index = reference.infenter_from_id
+            if from_index in self.infenter_references:
+                self.infenter_references[from_index][reference.infenter_num] = reference
+            else:
+                self.infenter_references[from_index] = {reference.infenter_num: reference}
+        if not reference.is_infexit and not reference.is_infenter:
+            if index in self.references:
+                self.references[index].append(reference)
+            else:
+                self.references[index] = [reference]
 
     def load(self, string: str):
         """
@@ -38,7 +52,6 @@ class Level:
         don't add references' room and parent_room, and rooms' reference when reading the string\n
         instead add them after the string is completely read\n
         """
-
 
         def argify_line(line: str):
             line = line.replace("\t", "").replace("\n", "").replace("\r", "")
@@ -118,13 +131,14 @@ class Level:
             if id in self.rooms:
                 raise ValueError("Duplicated room id: {}".format(id))
 
-            room = Room(width, height, id, (hue, sat, val), fillwithwalls)
-            if not floatinspace:
-                reference = Reference(id, (x, y), True, True, player, possessable, playerorder, fliph, False)
-                if player:
-                    self.players[playerorder] = reference
-            else:
-                reference = None
+            room = Room(width, height, id, (hue, sat, val), fillwithwalls, False, False)
+            # if not floatinspace:
+            reference = Reference(id, (x, y), True, True, player, possessable, playerorder, fliph, False,
+                                  floatinspace, 0, 0, 0, 0, 0)
+            if player:
+                self.players[playerorder] = reference
+            # else:
+            #     reference = None
             
             return (room, reference)
 
@@ -142,21 +156,24 @@ class Level:
             y = int(args[2])
             id = int(args[3])
             exitblock = (args[4] == "1")
+            is_infexit = (args[5] == "1")
+            infexit_num = int(args[6])
+            is_infenter = (args[7] == "1")
+            infenter_num = int(args[8])
+            infenter_id = int(args[9])
             player = (args[10] == "1")
             possessable = (args[11] == "1")
             playerorder = int(args[12])
             fliph = (args[13] == "1")
             floatinspace = (args[14] == "1")
 
-            if (args[5] == "1" or args[6] == "1" or args[7] == "1" or args[8] == "1"):
-                raise NotImplementedError("infinity blocks are not supported")
-
-            if not floatinspace:
-                reference = Reference(id, (x, y), False, exitblock, player, possessable, playerorder, fliph, False)
-                if player:
-                    self.players[playerorder] = reference
-            else:
-                reference = None
+            # if not floatinspace:
+            reference = Reference(id, (x, y), False, exitblock, player, possessable, playerorder, fliph, False,
+                                  floatinspace, is_infexit, infexit_num, is_infenter, infenter_num, infenter_id)
+            if player:
+                self.players[playerorder] = reference
+            # else:
+            #     reference = None
 
             return reference
 
@@ -182,7 +199,8 @@ class Level:
                     if args[4] == "1":
                         is_player = (args[3] == "1")
                         playerorder = int(args[5])
-                        wall_reference = Reference(None, (x, y), False, True, is_player, True, playerorder, False, True)
+                        wall_reference = Reference(None, (x, y), False, True, is_player, True, playerorder, False, True,
+                                                   False, 0, 0, 0, 0, 0)
                         room.reference_map[x][y] = wall_reference
                         self.possessable_walls.append(wall_reference)
                         if is_player:
@@ -193,14 +211,14 @@ class Level:
                 elif args[0] == "Block":
                     sub_room_lines = extract_room_lines(lines[index:])
                     sub_room, sub_reference = parse_room(sub_room_lines)
-                    if sub_reference is not None:
-                        room.reference_map[sub_reference.pos[0]][sub_reference.pos[1]] = sub_reference
+                    # if not sub_reference.float_in_space:  # we will remove these references in final cleanup
+                    room.reference_map[sub_reference.pos[0]][sub_reference.pos[1]] = sub_reference
                     index += len(sub_room_lines)
                 elif args[0] == "Ref":
                     sub_reference = parse_reference_line(line)
-                    if sub_reference is not None:
-                        room.reference_map[sub_reference.pos[0]][sub_reference.pos[1]] = sub_reference
-                        self.add_reference(sub_reference.id, sub_reference)
+                    self.add_reference(sub_reference.id, sub_reference)
+                    # if not sub_reference.float_in_space:  # we will remove these references in final cleanup
+                    room.reference_map[sub_reference.pos[0]][sub_reference.pos[1]] = sub_reference
                     index += 1
                 elif args[0] == "Floor":
                     x = int(args[1])
@@ -225,31 +243,64 @@ class Level:
             return (room, reference)
         
         def assign():
+            # assign references' level
+            for reference_id in self.references:
+                for reference in self.references[reference_id]:
+                    reference.level = self
+            for reference in self.possessable_walls:
+                reference.level = self
+            for reference_id in self.infexit_references:
+                for reference in self.infexit_references[reference_id].values():
+                    reference.level = self
+            for reference_id in self.infenter_references:
+                for reference in self.infenter_references[reference_id].values():
+                    reference.level = self
+
             # assign references' room and parent_room
             for room in self.rooms.values():
                 for x in range(room.width):
                     for y in range(room.height):
                         if room.reference_map[x][y] is not None:
-                            room.reference_map[x][y].parent_room = room
+                            if not room.reference_map[x][y].float_in_space:
+                                room.reference_map[x][y].parent_room = room
                             if not room.reference_map[x][y].is_wall:
                                 room.reference_map[x][y].room = self.rooms[room.reference_map[x][y].id]
 
             # references' "exitblock" overrides rooms' default exitblock (which is itself)
-            for room_id in self.references:
-                for reference in self.references[room_id]:
-                    if not reference.is_room_generated and reference.exit_block:
-                        for reference_2 in self.references[room_id]:
+            for reference_id in self.references:
+                for reference in self.references[reference_id]:
+                    if not reference.is_room_generated and reference.is_exit_block:
+                        for reference_2 in self.references[reference_id]:
                             if reference_2.is_room_generated:
-                                reference_2.exit_block = False
+                                reference_2.is_exit_block = False
+                        break
+            for room_id in self.infenter_references:
+                for infenter in self.infenter_references[room_id].values():
+                    if not infenter.is_room_generated and infenter.is_exit_block:
+                        for reference in self.references[infenter.id]:
+                            if reference.is_room_generated:
+                                reference.is_exit_block = False
                         break
 
             # assign rooms' reference
             for room in self.rooms.values():
                 if room.id in self.references:
                     for reference in self.references[room.id]:
-                        if reference.exit_block:
+                        if reference.is_exit_block:
                             room.exit_reference = reference
                             break
+            for room_id in self.infenter_references:
+                for infenter in self.infenter_references[room_id].values():
+                    if infenter.is_exit_block:
+                        infenter.room.exit_reference = infenter
+
+            # remove float_in_space references from room.reference_map
+            for room in self.rooms.values():
+                for x in range(room.width):
+                    for y in range(room.height):
+                        if room.reference_map[x][y] is not None and room.reference_map[x][y].float_in_space:
+                            room.reference_map[x][y] = None
+
 
         lines = string.split("\n")
         index = 0
@@ -274,7 +325,7 @@ class Level:
         if room is None:
             room = player_to_focus.parent_room
         background_color = 0
-        if room.exit_reference is not None:
+        if room.exit_reference is not None and room.exit_reference.parent_room is not None:
             color = room.exit_reference.parent_room.color[:2] + (room.exit_reference.room.color[2] * 0.45,)
             background_color = utils.Color.hsv_to_rgb_int(*color)
         hpprime.dimgrob(base_graphic, 320, 240, background_color)
@@ -295,7 +346,7 @@ class Level:
 
     def push_players(self, direction, undo_record, render=True, delay=0.1):
         for player_order in sorted(self.players):
-            self.players[player_order].pushed(direction, undo_record, self.players)
+            self.players[player_order].pushed(direction, undo_record, False)
             if render:
                 self.render(1)
                 if player_order != max(self.players):
@@ -321,10 +372,10 @@ class Level:
                 else:
                     self.push_players(directions.LEFT, self.undo_record)
             elif action == actions.UNDO:
-                self.undo_record.undo(self.players)
+                self.undo_record.undo(self.players, self.infexit_references, self.infenter_references)
             elif action == actions.RESTART:
-                self.undo_record.append(UndoRecord.Record.record_all(self.references, self.possessable_walls))
-                self.init_state.undo(self.players)
+                self.undo_record.append(UndoRecord.Record.record_all(self.references, self.possessable_walls, self.infexit_references, self.infenter_references))
+                self.init_state.undo(self.players, self.infexit_references, self.infenter_references)
 
             self.render(1)
             # self.render(1, base_room)
