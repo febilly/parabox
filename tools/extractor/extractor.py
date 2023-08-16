@@ -23,7 +23,10 @@ chaper_names = {"a": "01_Intro",
               "k": "12_Cycle",
               "m": "13_Player",
               "n": "14_Possess",
-              "o": "15_Wall"}
+              "o": "15_Wall",
+              "p": "16_Infinite_Exit",
+              "q": "17_Infinite_Enter",
+              "r": "18_Multi_Infinite"}
 
 for level in levels:
     if level == "":
