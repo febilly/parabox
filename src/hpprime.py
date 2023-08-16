@@ -7,6 +7,11 @@ import tkinter as tk
 
 LOGGING = False
 SCREEN_SIZE = (320, 240)
+SCALE = True
+SCALE_FACTOR = 3
+INTERPOLATION = True
+
+SCALED_SCREEN_SIZE = (SCREEN_SIZE[0] * SCALE_FACTOR, SCREEN_SIZE[1] * SCALE_FACTOR)
 
 window: Optional[pygame.Surface] = None
 graphics: list[Optional[pygame.Surface]] = [None for _ in range(10)]
@@ -94,8 +99,12 @@ key_mapping = {
 
 def check_flip(graphic):
     if graphic == 0:
-        window.blit(graphics[graphic], (0, 0))
-        pygame.display.flip()
+        if SCALE and not INTERPOLATION:
+            window.blit(pygame.transform.scale(graphics[graphic], SCALED_SCREEN_SIZE), (0, 0))
+            pygame.display.flip()
+        else:
+            window.blit(graphics[graphic], (0, 0))
+            pygame.display.flip()
 
 def int_color_to_tuple(color):
     if color >> 24 == 0:
@@ -106,12 +115,24 @@ def int_color_to_tuple(color):
 def blit(target_graphic, x, y, source_graphic):
     if LOGGING:
         print(f"blit({target_graphic}, {x}, {y}, {source_graphic})")
+    if SCALE and INTERPOLATION:
+        x *= SCALE_FACTOR
+        y *= SCALE_FACTOR
     graphics[target_graphic].blit(graphics[source_graphic], (x, y))
     check_flip(target_graphic)
 
 def strblit2(target_graphic, x, y, width, height, source_graphic, source_x, source_y, source_width, source_height):
     if LOGGING:
         print(f"strblit2({target_graphic}, {x}, {y}, {width}, {height}, {source_graphic}, {source_x}, {source_y}, {source_width}, {source_height})")
+    if SCALE and INTERPOLATION:
+        x *= SCALE_FACTOR
+        y *= SCALE_FACTOR
+        width *= SCALE_FACTOR
+        height *= SCALE_FACTOR
+        source_x *= SCALE_FACTOR
+        source_y *= SCALE_FACTOR
+        source_width *= SCALE_FACTOR
+        source_height *= SCALE_FACTOR
     source_rect = pygame.Rect(source_x, source_y, source_width, source_height)
     source_subsurface = graphics[source_graphic].subsurface(source_rect)
     scaled_subsurface = pygame.transform.scale(source_subsurface, (width, height))
@@ -122,6 +143,9 @@ def strblit2(target_graphic, x, y, width, height, source_graphic, source_x, sour
 def dimgrob(graphic, width, height, color):
     if LOGGING:
         print(f"dimgrob({graphic}, {width}, {height}, {color})")
+    if SCALE and INTERPOLATION:
+        width *= SCALE_FACTOR
+        height *= SCALE_FACTOR
     canvas_size = (width, height)
     canvas = pygame.Surface(canvas_size, flags=pygame.SRCALPHA)
     color_tuple = int_color_to_tuple(color)
@@ -130,6 +154,12 @@ def dimgrob(graphic, width, height, color):
     check_flip(graphic)
 
 def translucent_rect(surface, color_tuple, x, y, width, height, line_width=0):
+    if SCALE and INTERPOLATION:
+        x *= SCALE_FACTOR
+        y *= SCALE_FACTOR
+        width *= SCALE_FACTOR
+        height *= SCALE_FACTOR
+        line_width *= SCALE_FACTOR
     rect_surface = pygame.Surface((width, height), flags=pygame.SRCALPHA)
     pygame.draw.rect(rect_surface, color_tuple, (0, 0, width, height), width=line_width)
     surface.blit(rect_surface, (x, y))
@@ -137,6 +167,7 @@ def translucent_rect(surface, color_tuple, x, y, width, height, line_width=0):
 def rect(graphic, x, y, width, height, color):
     if LOGGING:
         print(f"rect({graphic}, {x}, {y}, {width}, {height}, {color})")
+    # the scaling is done in translucent_rect
     color_tuple = int_color_to_tuple(color)
     translucent_rect(graphics[graphic], color_tuple, x, y, width, height, line_width=1)
     check_flip(graphic)
@@ -144,6 +175,7 @@ def rect(graphic, x, y, width, height, color):
 def fillrect(graphic, x, y, width, height, color_edge, color_fill):
     if LOGGING:
         print(f"fillrect({graphic}, {x}, {y}, {width}, {height}, {color_edge}, {color_fill})")
+    # the scaling is done in translucent_rect
     color_edge_tuple = int_color_to_tuple(color_edge)
     color_fill_tuple = int_color_to_tuple(color_fill)
     translucent_rect(graphics[graphic], color_fill_tuple, x, y, width, height)
@@ -154,13 +186,19 @@ def fillrect(graphic, x, y, width, height, color_edge, color_fill):
 def grobh(graphic):
     if LOGGING:
         print(f"grobh({graphic})")
-    return graphics[graphic].get_height()
+    height = graphics[graphic].get_height()
+    if SCALE and INTERPOLATION:
+        height //= SCALE_FACTOR
+    return height
 
 
 def grobw(graphic):
     if LOGGING:
         print(f"grobw({graphic})")
-    return graphics[graphic].get_width()
+    width = graphics[graphic].get_width()
+    if SCALE and INTERPOLATION:
+        width //= SCALE_FACTOR
+    return width
 
 def eval(string):
     def get_files_list():
@@ -244,7 +282,10 @@ def eval(string):
         filename = matched.group(2)
         if LOGGING:
             print(f"Loading image {filename} into graphic {graphic}")
-        graphics[graphic] = pygame.image.load(filename).convert_alpha()
+        temp_graphic = pygame.image.load(filename).convert_alpha()
+        if SCALE and INTERPOLATION:
+            temp_graphic = pygame.transform.scale_by(temp_graphic, SCALE_FACTOR)
+        graphics[graphic] = temp_graphic
         check_flip(graphic)
     elif matched := re.match(dimgrob_pattern, string, re.IGNORECASE):
         graphic = int(matched.group(1))
@@ -314,6 +355,11 @@ def eval(string):
         if LOGGING:
             print(f"Drawing text \"{text}\" in graphic {graphic} at {x},{y} with font_size {font_size} and color {text_color}")
 
+        if SCALE and INTERPOLATION:
+            x *= SCALE_FACTOR
+            y *= SCALE_FACTOR
+            font_size *= SCALE_FACTOR
+
         text_color = int_color_to_tuple(text_color)
         background_color = int_color_to_tuple(background_color)
         if os.path.exists("PrimeSansFull.ttf"):
@@ -335,7 +381,12 @@ def eval(string):
 def textout(graphic, x, y, text, color):
     if LOGGING:
         print(f"textout({graphic}, {x}, {y}, {text}, {color})")
-    font = pygame.font.Font("PrimeSansFull.ttf", 16)
+    font_size = 16
+    if SCALE and INTERPOLATION:
+        x *= SCALE_FACTOR
+        y *= SCALE_FACTOR
+        font_size *= SCALE_FACTOR
+    font = pygame.font.Font("PrimeSansFull.ttf", font_size)
     text_surface = font.render(text, True, color)
     graphics[graphic].blit(text_surface, (x, y))
     check_flip(graphic)
@@ -345,8 +396,17 @@ def init():
     global window
 
     pygame.init()
-    window = pygame.display.set_mode(SCREEN_SIZE)
-    dimgrob(0, 320, 240, 0x00000000)
+    if SCALE:
+        size = SCALED_SCREEN_SIZE
+    else:
+        size = SCREEN_SIZE
+
+    window = pygame.display.set_mode(size)
+
+    if SCALE and INTERPOLATION:
+        dimgrob(0, *SCALED_SCREEN_SIZE, 0x00000000)
+    else:
+        dimgrob(0, *SCREEN_SIZE, 0x00000000)
 
 
 init()
