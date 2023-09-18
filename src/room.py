@@ -33,6 +33,28 @@ class Room:
                              area[0][1] + max((y + 1) * size[1] // self.height - 1, 0))
         return new_pos_left_bottom, new_pos_right_top
 
+    def is_surrounded(self):
+        if self.width == 0 and self.height == 0:
+            return self.wall_map[0][0]
+        # check the top and bottom
+        for i in range(self.width):
+            if not self.wall_map[i][0]:
+                return False
+            if not self.wall_map[self.width - i - 1][self.height - 1]:
+                return False
+        # check the left and right
+        for i in range(self.height):
+            if not self.wall_map[0][i]:
+                return False
+            if not self.wall_map[self.width - 1][self.height - i - 1]:
+                return False
+        return True
+
+    def is_surrounded_by_wall(self):
+        if self.static_is_surrounded is None:
+            self.static_is_surrounded = self.is_surrounded()
+        return self.static_is_surrounded
+
     def render(self, virtual_graphic: VirtualGraphic, area: tuple[tuple[int, int], tuple[int, int]],
                render_as_flipped: bool = False):
         """
@@ -41,39 +63,17 @@ class Room:
 
         # print("rendering room {}, render size: {} x {}".format(self.id, size[0], size[1]))
 
-        def is_surrounded():
-            if self.width == 0 and self.height == 0:
-                return self.wall_map[0][0]
-            # check the top and bottom
-            for i in range(self.width):
-                if not self.wall_map[i][0]:
-                    return False
-                if not self.wall_map[self.width - i - 1][self.height - 1]:
-                    return False
-            # check the left and right
-            for i in range(self.height):
-                if not self.wall_map[0][i]:
-                    return False
-                if not self.wall_map[self.width - 1][self.height - i - 1]:
-                    return False
-            return True
-
-        def is_surrounded_by_wall():
-            if self.static_is_surrounded is None:
-                self.static_is_surrounded = is_surrounded()
-            return self.static_is_surrounded
-
         size = area[1][0] - area[0][0] + 1, area[1][1] - area[0][1] + 1
         if size[0] <= 0 or size[1] <= 0:
             return
         elif size[0] <= 5 or size[1] <= 5:
-            ground_color = self.color[:2] + (self.color[2] * (0.45 + 0.55 * is_surrounded_by_wall()),)
+            ground_color = self.color[:2] + (self.color[2] * (0.45 + 0.55 * self.is_surrounded_by_wall()),)
             virtual_graphic.draw_filled_box_area(area, utils.Color.hsv_to_rgb_int(*ground_color), 0)
             return
 
         wall_color_int = utils.Color.hsv_to_rgb_int(*self.color)
 
-        if self.fill_with_blocks or (not self.not_block and is_surrounded_by_wall()):
+        if self.fill_with_blocks or (not self.not_block and self.is_surrounded_by_wall()):
             virtual_graphic.draw_filled_box_area(area, wall_color_int, 0)
         else:
             ground_color = self.color[:2] + (self.color[2] * 0.45,)

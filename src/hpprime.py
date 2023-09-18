@@ -179,7 +179,8 @@ def fillrect(graphic, x, y, width, height, color_edge, color_fill):
     color_edge_tuple = int_color_to_tuple(color_edge)
     color_fill_tuple = int_color_to_tuple(color_fill)
     translucent_rect(graphics[graphic], color_fill_tuple, x, y, width, height)
-    translucent_rect(graphics[graphic], color_edge_tuple, x, y, width, height, line_width=1)
+    if color_edge != color_fill:
+        translucent_rect(graphics[graphic], color_edge_tuple, x, y, width, height, line_width=1)
     check_flip(graphic)
 
 
@@ -256,8 +257,9 @@ def eval(string):
         return choice
 
     load_image_pattern = r'^ *G([0-9]) *:= *AFiles\("(.+)"\) *$'
-    dimgrob_pattern = r'^ *DIMGROB_P\(G([0-9]), *([0-9]+), *([0-9]+), *#([0-9a-fA-F]+)h\) *$'
-    rectp_pattern = r'^ *RECT_P\(G([0-9]), *([0-9]+), *([0-9]+), *([0-9]+), *([0-9]+), *([0-9]+)\) *$'
+    dimgrob_pattern = r'^ *DIMGROB_P\(G([0-9]), *([0-9]+), *([0-9]+), *(#?[0-9a-fA-F]+)h?\) *$'
+    rectp_1_pattern = r'^ *RECT_P\(G([0-9]), *([0-9]+), *([0-9]+), *([0-9]+), *([0-9]+), *(#?[0-9a-fA-F]+)h?\) *$'
+    rectp_2_pattern = r'^ *RECT_P\(G([0-9]), *([0-9]+), *([0-9]+), *([0-9]+), *([0-9]+), *(#?[0-9a-fA-F]+)h?, *(#?[0-9a-fA-F]+)h?\) *$'
     set_variable_pattern = r'^ *([A-Z]) *:= *([0-9]+) *$'
     get_variable_pattern = r'^ *([A-Z]) *$'
     choose_pattern = r'^ *CHOOSE\(([A-Z]), *(.+)\) *$'
@@ -265,13 +267,13 @@ def eval(string):
     wait_pattern = r'^ *WAIT\(([0-9\.]+)\) *$'
 
     if LOGGING:
-        if string != "GETKEY":
+        if string != "GETKEY" and string != "GETKEY()":
             print(f"eval(\"{string}\")")
     if string == "time":
         return time()
-    elif string == "AFiles()":
+    elif string == "AFiles" or string == "AFiles()":
         return get_files_list()
-    elif string == "GETKEY":
+    elif string == "GETKEY" or string == "GETKEY()":
         key = getkey()
         if LOGGING:
             # print(f"GETKEY returns {key}")
@@ -291,12 +293,12 @@ def eval(string):
         graphic = int(matched.group(1))
         width = int(matched.group(2))
         height = int(matched.group(3))
-        color = int(matched.group(4), 16)
+        color = int(matched.group(4)[1:], 16) if matched.group(4)[0] == "#" else int(matched.group(4))
         if LOGGING:
             print(f"Creating graphic {graphic} with size {width}x{height} and color {color}")
         dimgrob(graphic, width, height, color)
         check_flip(graphic)
-    elif matched := re.match(rectp_pattern, string, re.IGNORECASE):
+    elif matched := re.match(rectp_1_pattern, string, re.IGNORECASE):
         graphic = int(matched.group(1))
         x1 = int(matched.group(2))
         y1 = int(matched.group(3))
@@ -304,10 +306,24 @@ def eval(string):
         y2 = int(matched.group(5))
         width = x2 - x1 + 1
         height = y2 - y1 + 1
-        color = int(matched.group(6))
+        color = int(matched.group(6)[1:], 16) if matched.group(6)[0] == "#" else int(matched.group(6))
         if LOGGING:
             print(f"Drawing rectangle {x1},{y1} {width}x{height} in graphic {graphic} with color {color}")
-        rect(graphic, x1, y1, width, height, color)
+        fillrect(graphic, x1, y1, width, height, color, color)
+        check_flip(graphic)
+    elif matched := re.match(rectp_2_pattern, string, re.IGNORECASE):
+        graphic = int(matched.group(1))
+        x1 = int(matched.group(2))
+        y1 = int(matched.group(3))
+        x2 = int(matched.group(4))
+        y2 = int(matched.group(5))
+        width = x2 - x1 + 1
+        height = y2 - y1 + 1
+        color1 = int(matched.group(6)[1:], 16) if matched.group(6)[0] == "#" else int(matched.group(6))
+        color2 = int(matched.group(7)[1:], 16) if matched.group(7)[0] == "#" else int(matched.group(7))
+        if LOGGING:
+            print(f"Drawing rectangle {x1},{y1} {width}x{height} in graphic {graphic} with edgecolor {color1} and fillcolor {color2}")
+        fillrect(graphic, x1, y1, width, height, color1, color2)
         check_flip(graphic)
     elif matched := re.match(set_variable_pattern, string, re.IGNORECASE):
         variable = matched.group(1)
