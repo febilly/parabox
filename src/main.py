@@ -5,7 +5,7 @@ from tileset import Tileset
 from palettes import Palettes
 from hub import select_level, load_levels_from_chapter, hub
 
-Tileset().init(2, 9, 64, 64)
+Tileset().init(2, 9)
 Palettes().init()
 
 hub()

@@ -88,27 +88,7 @@ class Room:
                     elif self.reference_map[x][y] is not None:
                         inner_reference = self.reference_map[x][y]
                         inner_area = self.sub_area(area, render_x, self.height - render_y - 1)
-                        if not inner_reference.is_wall:
-                            inner_room = inner_reference.room
-                            inner_room.render(virtual_graphic, inner_area, render_as_flipped ^ inner_reference.is_flipped)
-                            virtual_graphic.draw_empty_box_area(inner_area, 0)
-                        else:
-                            virtual_graphic.draw_filled_box_area(inner_area, wall_color_int)
-
-                        if inner_reference.is_player:
-                            virtual_graphic.draw_tile_area("Player", inner_area)
-                        if inner_reference.is_possessable and not self.reference_map[x][y].is_player:
-                            virtual_graphic.draw_tile_area("Possessable", inner_area)
-                        if inner_reference.is_infexit:
-                            virtual_graphic.draw_filled_box_area(inner_area, 0xa0000000)
-                            virtual_graphic.draw_tile_area("Infinity", inner_area)
-                        if inner_reference.is_infenter:
-                            virtual_graphic.draw_tile_area("Epsilon", inner_area)
-
-                        if not (inner_reference.is_exit_block or inner_reference.is_infexit):
-                            virtual_graphic.draw_filled_box_area(inner_area, 0x80ffffff, 0)
-                        if inner_reference.is_nonenterable() and not inner_reference.is_player:
-                            virtual_graphic.draw_empty_box_area(inner_area, 0xffe700)
+                        inner_reference.render(virtual_graphic, inner_area, render_as_flipped)
 
             for button in self.buttons:
                 render_x = self.width - button.pos[0] - 1 if render_as_flipped else button.pos[0]

@@ -2,6 +2,8 @@ import room
 import directions
 import object_types
 import undo_record
+import utils
+from virtual_graphic import VirtualGraphic
 
 
 class Reference:
@@ -602,3 +604,31 @@ class Reference:
             record.reference.pressed_direction = None
         return result
 
+
+    def render(self, virtual_graphic                , area                                         ,
+               render_as_flipped       = False):
+        """
+        area: (left_bottom, right_top), both are (x, y)
+        """
+
+        if not self.is_wall:
+            self.room.render(virtual_graphic, area, render_as_flipped ^ self.is_flipped)
+            virtual_graphic.draw_empty_box_area(area, 0)
+        else:
+            wall_color_int = utils.Color.hsv_to_rgb_int(*self.room.color)
+            virtual_graphic.draw_filled_box_area(area, wall_color_int)
+
+        if self.is_player:
+            virtual_graphic.draw_tile_area("Player", area)
+        if self.is_possessable and not self.is_player:
+            virtual_graphic.draw_tile_area("Possessable", area)
+        if self.is_infexit:
+            virtual_graphic.draw_filled_box_area(area, 0xa0000000)
+            virtual_graphic.draw_tile_area("Infinity", area)
+        if self.is_infenter:
+            virtual_graphic.draw_tile_area("Epsilon", area)
+
+        if not (self.is_exit_block or self.is_infexit):
+            virtual_graphic.draw_filled_box_area(area, 0x80ffffff, 0)
+        if self.is_nonenterable() and not self.is_player:
+            virtual_graphic.draw_empty_box_area(area, 0xffe700)

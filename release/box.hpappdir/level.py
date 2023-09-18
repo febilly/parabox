@@ -1,4 +1,3 @@
-from graphic_splitter import GraphicSplitter
 from virtual_graphic import VirtualGraphic
 from room import Room
 from reference import Reference
@@ -19,7 +18,6 @@ class Level:
         self.infexit_references                                  = {}  # the first index is the room id, the second is the infexit number
         self.infenter_references                                  = {}  # the first index is the room id, the second is the infenter number
         self.graphic_mapping                 = {}
-        self.graphic_splitter                  = None
         self.players                       = {}
         self.root_room       = None
         self.goal_count = 0

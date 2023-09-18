@@ -4,11 +4,20 @@ from tileset import Tileset
 class VirtualGraphic:
     def __init__(self, canvas, start_x, start_y, width, height):
         self.canvas = canvas
+        self.canvas_width = hpprime.grobw(canvas)
+        self.canvas_height = hpprime.grobh(canvas)
         self.start_x = start_x
         self.start_y = start_y
         self.width = width
         self.height = height
         pass
+
+    def is_visible(self):
+        """
+        判断此virtual graphic是否与canvas有重叠
+        """
+        return not (self.start_x + self.width < 0 or self.start_y + self.height < 0 or
+                    self.start_x >= self.canvas_width or self.start_y >= self.canvas_height)
 
     def draw_filled_box_pos(self, x1, y1, x2, y2, color, border_color=None):
         # TODO: adjust the thickness of the border based on the size of the box

@@ -1,4 +1,5 @@
 from singleton import singleton
+from utils import GateKeeper
 import hpprime
 
 @singleton
@@ -11,9 +12,19 @@ class Tileset:
         self.inited = False
         pass
 
-    def init(self, base_canvas     , temp_canvas     , height     , width     ):
+    def init(self, base_canvas     , temp_canvas     , height     =None, width     =None):
         self.base_canvas = base_canvas
         self.temp_canvas = temp_canvas
+        GateKeeper.check_pair(base_canvas, temp_canvas)
+        if height is None:
+            all_files = hpprime.eval("AFiles()")
+            for file in all_files:
+                if not file.startswith("_") and file.endswith(".png") and file != "icon.png":
+                    hpprime.eval("G{}:=AFiles(\"{}\")".format(self.temp_canvas, file))
+                    height = hpprime.grobh(self.temp_canvas)
+                    width = hpprime.grobw(self.temp_canvas)
+                    break
+
         self.height = height
         self.width = width
 
