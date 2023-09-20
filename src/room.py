@@ -82,19 +82,21 @@ class Room:
                 for y in range(self.height):
                     render_x = self.width - x - 1 if render_as_flipped else x
                     render_y = y
+                    inner_area = self.sub_area(area, render_x, self.height - render_y - 1)
 
-                    if self.wall_map[x][y]:
-                        virtual_graphic.draw_filled_box_area(self.sub_area(area, render_x, self.height - render_y - 1), wall_color_int)
-                    elif self.reference_map[x][y] is not None:
-                        inner_reference = self.reference_map[x][y]
-                        inner_area = self.sub_area(area, render_x, self.height - render_y - 1)
-                        inner_reference.render(virtual_graphic, inner_area, render_as_flipped)
+                    if virtual_graphic.is_area_visible(inner_area):
+                        if self.wall_map[x][y]:
+                            virtual_graphic.draw_filled_box_area(inner_area, wall_color_int)
+                        elif self.reference_map[x][y] is not None:
+                            inner_reference = self.reference_map[x][y]
+                            inner_reference.render(virtual_graphic, inner_area, render_as_flipped)
 
             for button in self.buttons:
                 render_x = self.width - button.pos[0] - 1 if render_as_flipped else button.pos[0]
                 render_y = button.pos[1]
                 inner_area = self.sub_area(area, render_x, self.height - render_y - 1)
-                button.render(inner_area, virtual_graphic, self.reference_map)
+                if virtual_graphic.is_area_visible(inner_area):
+                    button.render(inner_area, virtual_graphic, self.reference_map)
 
             if self.exit_reference is None or not self.exit_reference.is_nonenterable():
                 virtual_graphic.draw_empty_box_area(area, 0)

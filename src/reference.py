@@ -88,10 +88,10 @@ class Reference:
                 self.level.infenter_references[self.id] = {degree: new_epsilon_reference}
             return new_epsilon_reference
 
-    def _get_next_pos(self, direction: int, tested: list["Reference"], can_exit, offset=0.5, is_flipped=False):
+    def _get_next_pos(self, direction: int, tested: list["Reference"], can_exit, offset=0.5, is_flipped=False, scale: tuple[int, int]=(1, 1)):
         """
         get the next object's pos in the given direction
-        return an object_types.xxx or a tuple(room, pos, offset, is_flipped)
+        return an object_types.xxx or a tuple(room, pos, offset, is_flipped, scale)
         the offset is where in the next ref should this ref enter
         is_flipped == next_obj.is_flipped_current xor self.is_flipped_current
         """
@@ -99,7 +99,7 @@ class Reference:
         if self.parent_room is None:
             return object_types.INFINITY
         elif self.parent_room.is_in_bound(next_pos):
-            return (self.parent_room, next_pos, offset, is_flipped)
+            return (self.parent_room, next_pos, offset, is_flipped, scale)
         elif not can_exit:
             return object_types.WALL  # TODO: check this
         else:
@@ -121,22 +121,23 @@ class Reference:
                     next_degree = 0
                 infexit = self.get_infexit_reference(next_degree)
                 new_offset = 1 - offset if infexit.is_flipped and directions.is_vertical(direction) else offset
-                return infexit._get_next_pos(direction, tested, can_exit, new_offset, is_flipped)
+                return infexit._get_next_pos(direction, tested, can_exit, new_offset, is_flipped, scale)
 
             # calculate the new offset after exiting the block
             if direction == directions.UP or direction == directions.DOWN:
                 new_offset = (self.pos[0] + offset) / self.parent_room.width
             else:
                 new_offset = (self.pos[1] + offset) / self.parent_room.height
-
             if exit_reference.is_flipped and directions.is_vertical(direction):
                 new_offset = 1 - new_offset
+            new_scale = (scale[0] * self.parent_room.width, scale[1] * self.parent_room.height)
 
-            return exit_reference._get_next_pos(new_direction, tested, can_exit, new_offset, is_flipped ^ self.parent_room.exit_reference.is_flipped)
+            return exit_reference._get_next_pos(new_direction, tested, can_exit, new_offset, is_flipped ^ self.parent_room.exit_reference.is_flipped, new_scale)
 
     def get_next_pos(self, direction: int, can_exit=True):
         """
         get the next object's pos in the given direction
+        return an object_types.xxx or a tuple(room, pos, offset, is_flipped, scale)
         """
         tested: list["Reference"] = []
         result = self._get_next_pos(direction, tested, can_exit)

@@ -66,18 +66,21 @@ def next_pos(pos: tuple[int, int], direction: int) -> tuple[int, int]:
         return pos[0] + 1, pos[1]
     raise ValueError("invalid direction: {}".format(direction))
 
-def enter_pos(enter_direction: int, width: int, height: int, is_flipped: bool, offset = 0.5) -> tuple[int, int]:
+def enter_pos(enter_direction: int, width: int, height: int, is_flipped: bool, offset = 0.5, rounding: bool=True) -> tuple[int, int]:
     offset += 1e-6
     if enter_direction == UP:
-        unflipped_pos = (int(width * offset), 0)
+        unflipped_pos = (width * offset, 0)
     elif enter_direction == LEFT:
-        unflipped_pos = (width - 1, int(height * offset))
+        unflipped_pos = (width - 1, height * offset)
     elif enter_direction == DOWN:
-        unflipped_pos = (int(width * offset), height - 1)
+        unflipped_pos = (width * offset, height - 1)
     elif enter_direction == RIGHT:
-        unflipped_pos = (0, int(height * offset))
+        unflipped_pos = (0, height * offset)
     else:
         raise ValueError("invalid direction: {}".format(enter_direction))
+
+    if rounding:
+        unflipped_pos = tuple(map(int, unflipped_pos))
 
     if is_flipped:
         return (width - 1 - unflipped_pos[0], unflipped_pos[1])

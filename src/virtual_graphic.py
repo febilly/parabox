@@ -12,12 +12,12 @@ class VirtualGraphic:
         self.height = height
         pass
 
-    def is_visible(self):
+    def is_area_visible(self, area: tuple[tuple[int, int], tuple[int, int]]):
         """
-        判断此virtual graphic是否与canvas有重叠
+        判断此virtual graphic中的area是否与canvas有重叠
         """
-        return not (self.start_x + self.width < 0 or self.start_y + self.height < 0 or
-                    self.start_x >= self.canvas_width or self.start_y >= self.canvas_height)
+        return self.start_x + area[1][0] >= 0 and self.start_y + area[1][1] >= 0 and \
+               self.start_x + area[0][0] < self.canvas_width and self.start_y + area[0][1] < self.canvas_height
 
     def draw_filled_box_pos(self, x1, y1, x2, y2, color, border_color=None):
         # TODO: adjust the thickness of the border based on the size of the box

@@ -322,14 +322,15 @@ class Level:
         player_to_focus = self.players[0]
         if room is None:
             room = player_to_focus.parent_room
-        background_color = 0
-        if room.exit_reference is not None and room.exit_reference.parent_room is not None:
-            color = room.exit_reference.parent_room.color[:2] + (room.exit_reference.room.color[2] * 0.45,)
-            background_color = utils.Color.hsv_to_rgb_int(*color)
-        hpprime.dimgrob(base_graphic, 320, 240, background_color)
-        render_pos = ((320 - size[0]) // 2, (240 - size[1]) // 2)
-        virtual_graphic = VirtualGraphic(base_graphic, render_pos[0], render_pos[1], size[0], size[1])
-        room.render(virtual_graphic, ((0, 0), (size[0] - 1, size[1] - 1)), player_to_focus.is_view_flipped)
+        hpprime.dimgrob(base_graphic, 320, 240, 0)
+
+        render_center = ((320 - size[0]) // 2, (240 - size[1]) // 2)
+        for x in range(-1, 2):
+            for y in range(-1, 2):
+                render_pos = (render_center[0] + x * size[0], render_center[1] + y * size[1])
+                virtual_graphic = VirtualGraphic(base_graphic, render_pos[0], render_pos[1], size[0], size[1])
+                room.render(virtual_graphic, ((0, 0), (size[0] - 1, size[1] - 1)), player_to_focus.is_view_flipped)
+
         hpprime.blit(0, 0, 0, base_graphic)
 
     def is_completed(self):
