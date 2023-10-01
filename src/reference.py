@@ -4,7 +4,12 @@ import object_types
 import undo_record
 import utils
 from virtual_graphic import VirtualGraphic
+from location import Location
 
+try:
+    from typing import Optional
+except:
+    pass
 
 class Reference:
     """
@@ -21,8 +26,8 @@ class Reference:
         self.is_player = is_player
         self.is_possessable = is_possessable
         self.playerorder = playerorder
-        self.parent_room: room.Room = None
-        self.room: room.Room = None
+        self.parent_room: Optional[room.Room] = None
+        self.room: Optional[room.Room] = None
         self.queried_directions: list[int] = []  # (pos, direction)
         self.pressed_direction = None
         self.is_flipped = is_flipped  # whether this reference is flipped relative to its parent room
@@ -40,6 +45,9 @@ class Reference:
         self.infenter_from_id = infenter_from_id
         # self.infenter_to_rooms: dict[int, room] = {}  # degree -> room
         pass
+
+    def __str__(self):
+        return "Reference{}".format(self.id)
 
     def is_nonenterable(self):  # with golden outline
         return self.is_infexit or (self.parent_room is not None and self.parent_room.is_void)
@@ -88,69 +96,6 @@ class Reference:
                 self.level.infenter_references[self.id] = {degree: new_epsilon_reference}
             return new_epsilon_reference
 
-    def _get_next_pos(self, direction: int, tested: list["Reference"], can_exit, offset=0.5, is_flipped=False, scale: tuple[int, int]=(1, 1)):
-        """
-        get the next object's pos in the given direction
-        return an object_types.xxx or a tuple(room, pos, offset, is_flipped, scale)
-        the offset is where in the next ref should this ref enter
-        is_flipped == next_obj.is_flipped_current xor self.is_flipped_current
-        """
-        next_pos = directions.next_pos(self.pos, direction)
-        if self.parent_room is None:
-            return object_types.INFINITY
-        elif self.parent_room.is_in_bound(next_pos):
-            return (self.parent_room, next_pos, offset, is_flipped, scale)
-        elif not can_exit:
-            return object_types.WALL  # TODO: check this
-        else:
-            # return the next pos of self.parent_room.reference
-            exit_reference = self.parent_room.exit_reference
-            if exit_reference is None:
-                return object_types.WALL
-            self.queried_directions.append(direction)
-            tested.append(self)
-
-            new_direction = directions.reverse(direction) if exit_reference.is_flipped and directions.is_horizontal(direction) else direction
-
-            if new_direction in exit_reference.queried_directions:
-                # infexit was triggered
-                # self is exiting from infexit instead of exit_reference
-                if self.is_infexit:
-                    next_degree = self.infexit_num + 1
-                else:
-                    next_degree = 0
-                infexit = self.get_infexit_reference(next_degree)
-                new_offset = 1 - offset if infexit.is_flipped and directions.is_vertical(direction) else offset
-                return infexit._get_next_pos(direction, tested, can_exit, new_offset, is_flipped, scale)
-
-            # calculate the new offset after exiting the block
-            if direction == directions.UP or direction == directions.DOWN:
-                new_offset = (self.pos[0] + offset) / self.parent_room.width
-            else:
-                new_offset = (self.pos[1] + offset) / self.parent_room.height
-            if exit_reference.is_flipped and directions.is_vertical(direction):
-                new_offset = 1 - new_offset
-            new_scale = (scale[0] * self.parent_room.width, scale[1] * self.parent_room.height)
-
-            return exit_reference._get_next_pos(new_direction, tested, can_exit, new_offset, is_flipped ^ self.parent_room.exit_reference.is_flipped, new_scale)
-
-    def get_next_pos(self, direction: int, can_exit=True):
-        """
-        get the next object's pos in the given direction
-        return an object_types.xxx or a tuple(room, pos, offset, is_flipped, scale)
-        """
-        tested: list["Reference"] = []
-        result = self._get_next_pos(direction, tested, can_exit)
-        for reference in tested:
-            reference.queried_directions = []
-        return result
-
-    def get_next(self, direction: int, can_exit=True):
-        pos = self.get_next_pos(direction, can_exit)
-        if isinstance(pos, int):
-            return pos
-        else:
-            return pos[0].get(pos[1])
 
     class MoveRecord:
         def __init__(self, reference: "Reference", new_parent_room, new_pos: tuple[int, int], is_flipped: bool, is_player=None):
@@ -235,44 +180,35 @@ class Reference:
         """
         if self.pressed_direction is not None and self.pressed_direction != direction:
             return False
-        next_pos = self.get_next_pos(direction)
-        next_obj = self.get_next(direction)
-        if next_obj == object_types.WALL:
+        location = Location(self.parent_room, self.pos)
+        next_location = location.get_next_location(direction)
+        if next_location is None:
             return False
-        elif next_obj == object_types.GROUND:
-            if not isinstance(next_pos, tuple):  # shut up vscode, I will check it, ok?
-                raise TypeError("next_pos is a {}, not a tuple".format(type(next_pos)))
-            tracker.move_push(self.MoveRecord(self, next_pos[0], next_pos[1], next_pos[3]))
+        next_obj_type = next_location.get_type()
+        if next_obj_type == object_types.WALL:
+            return False
+        elif next_obj_type == object_types.GROUND:
+            tracker.move_push(self.MoveRecord(self, next_location.room, next_location.pos, next_location.is_relatively_flipped))
             return True
-        elif next_obj == object_types.INFINITY:
-            return False
         elif self.pressed_direction is not None:  # and self.pressed_direction == direction
-            if not isinstance(next_pos, tuple):
-                raise TypeError("next_pos is a {}, not a tuple".format(type(next_pos)))
-            tracker.move_push(self.MoveRecord(self, next_pos[0], next_pos[1], next_pos[3]))
+            tracker.move_push(self.MoveRecord(self, next_location.room, next_location.pos, next_location.is_relatively_flipped))
             return True
 
         else:
-            # recurse start here
-            # prepare
+            next_obj = next_location.get_reference()
+
             # check if the next object is pushable or enterable
-            if not isinstance(next_obj, Reference):
-                raise TypeError("next_obj is not a Reference")
-            if not isinstance(next_pos, tuple):
-                raise TypeError("next_pos is a {}, not a tuple".format(type(next_pos)))
-
-
             # possessable walls are only possessable, not pushable or something else
             if not next_obj.is_wall:
                 # prepare
                 # "next_pos[3]" == "is_flipped"
-                new_direction = directions.reverse(direction) if next_pos[3] and directions.is_horizontal(direction) else direction
-                if next_pos[3]:
+                new_direction = directions.reverse(direction) if next_location.is_relatively_flipped and directions.is_horizontal(direction) else direction
+                if next_location.is_relatively_flipped:
                     self.is_flipped ^= True
-                self_flipped = next_pos[3]
+                self_flipped = next_location.is_relatively_flipped
 
                 # push
-                tracker.move_push(self.MoveRecord(self, next_pos[0], next_pos[1], next_pos[3]))
+                tracker.move_push(self.MoveRecord(self, next_location.room, next_location.pos, next_location.is_relatively_flipped))
                 self.pressed_direction = direction
                 if next_obj._pushed(new_direction, tracker, False):
                     if self_flipped:
@@ -284,7 +220,7 @@ class Reference:
                 if not next_obj.is_nonenterable():
                     # enter
                     self.pressed_direction = direction
-                    if next_obj._entered_by(self, new_direction, tracker, next_pos[2], next_pos[3], is_first_movement):
+                    if next_obj._entered_by(self, new_direction, tracker, next_location.offset, next_location.is_relatively_flipped, is_first_movement):
                         if self_flipped:
                             self.is_flipped ^= True
                         return True
@@ -292,7 +228,7 @@ class Reference:
 
                     if not (self.is_wall or self.is_nonenterable()):
                         # eat
-                        tracker.move_push(self.MoveRecord(self, next_pos[0], next_pos[1], next_pos[3]))
+                        tracker.move_push(self.MoveRecord(self, next_location.room, next_location.pos, next_location.is_relatively_flipped))
                         self.pressed_direction = direction
                         if next_obj._eaten_by(self, new_direction, tracker):
                             if self_flipped:
@@ -308,7 +244,7 @@ class Reference:
             # possess
             if is_first_movement:
                 self.pressed_direction = direction
-                if next_obj._possessed_by(self, direction, tracker, next_pos[2]):
+                if next_obj._possessed_by(self, direction, tracker, next_location.offset):
                     return True
                 self.pressed_direction = None
 

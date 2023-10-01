@@ -7,8 +7,13 @@ import directions
 import actions
 import button
 from undo_record import UndoRecord
-import utils
 from palettes import Palettes
+import movement
+
+try:
+    from typing import Optional
+except:
+    pass
 
 class Level:
     def __init__(self, string: str, palette_index=-1):
@@ -19,7 +24,7 @@ class Level:
         self.infenter_references: dict[int, dict[int, Reference]] = {}  # the first index is the room id, the second is the infenter number
         self.graphic_mapping: dict[int, int] = {}
         self.players: dict[int, Reference] = {}
-        self.root_room: Room = None
+        self.root_room: Optional[Room] = None
         self.goal_count = 0
         self.undo_record = UndoRecord()
         self.palette_index = palette_index
@@ -345,7 +350,8 @@ class Level:
 
     def push_players(self, direction, undo_record, render=True, delay=0.1):
         for player_order in sorted(self.players):
-            self.players[player_order].pushed(direction, undo_record, False)
+            # self.players[player_order].pushed(direction, undo_record, False)
+            movement.push(self.players[player_order], direction, self.players, undo_record)
             if render:
                 self.render(1)
                 if player_order != max(self.players):

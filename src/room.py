@@ -4,9 +4,13 @@ import reference
 import object_types
 import button
 
+try:
+    from typing import Optional
+except:
+    pass
 
 class Room:
-    def __init__(self, width, height, id, color: tuple, fill_with_blocks, not_block, is_void):
+    def __init__(self, width, height, id: int, color: tuple, fill_with_blocks, not_block, is_void):
         self.width = width
         self.height = height
         self.id = id
@@ -16,11 +20,14 @@ class Room:
         self.is_void = is_void
         self.is_root_room = False
         self.static_is_surrounded = None
-        self.exit_reference: reference.Reference = None
+        self.exit_reference: Optional[reference.Reference] = None
         # coordinates start at 0,0 in the bottom left corner
         self.wall_map = [[False for y in range(height)] for x in range(width)]
-        self.reference_map: list[list[reference.Reference]] = [[None for y in range(height)] for x in range(width)]
+        self.reference_map: list[list[Optional[reference.Reference]]] = [[None for y in range(height)] for x in range(width)]
         self.buttons: list[button.Button] = []
+
+    def __str__(self):
+        return "Room{}".format(self.id)
 
     def sub_area(self, area, x, y):
         """
@@ -105,6 +112,12 @@ class Room:
 
     def is_in_bound(self, pos):
         return 0 <= pos[0] < self.width and 0 <= pos[1] < self.height
+
+    def is_at_edge(self, pos):
+        return pos[0] == 0 or pos[0] == self.width - 1 or pos[1] == 0 or pos[1] == self.height - 1
+    
+    def is_inside(self, pos):
+        return 0 < pos[0] < self.width - 1 and 0 < pos[1] < self.height - 1
 
     def get(self, pos):
         if self.fill_with_blocks:
