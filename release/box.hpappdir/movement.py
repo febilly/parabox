@@ -14,9 +14,9 @@ except:
 
 
 class Record:
-    def __init__(self, reference: "Reference", new_location: Location, is_player):
+    def __init__(self, reference             , new_location          , is_player):
         self.reference = reference
-        self.new_location = new_location  # ä½¿ç”¨new_locationé‡Œé¢çš„roomã€poså’Œis_relatively_flippedï¼ˆå’Œå·²æœ‰çš„flippedå¼‚æˆ–ï¼‰
+        self.new_location = new_location  # Ê¹ÓÃnew_locationÀïÃæµÄroom¡¢posºÍis_relatively_flipped£¨ºÍÒÑÓĞµÄflippedÒì»ò£©
         self.is_player = is_player
 
     def __eq__(self, other):
@@ -26,10 +26,10 @@ class Record:
         return "Moving {} to {}".format(self.reference, self.new_location)
 
 class BaseActionNode:
-    def __init__(self, this_location: Location, initiator_location: Optional[Location], direction: int,
-                 record_stack: list, is_first_movement: bool):
+    def __init__(self, this_location          , initiator_location                    , direction     ,
+                 record_stack      , is_first_movement      ):
         """
-        åˆå§‹åŒ–æ—¶åªè®°å½•ä¼ å…¥çš„å‚æ•°ï¼Œä¸è¿›è¡Œå…¶ä»–æ“ä½œ
+        ³õÊ¼»¯Ê±Ö»¼ÇÂ¼´«ÈëµÄ²ÎÊı£¬²»½øĞĞÆäËû²Ù×÷
         """
         self.this_location = this_location
         self.initiator_location = initiator_location
@@ -40,7 +40,7 @@ class BaseActionNode:
 
     def __enter__(self):
         """
-        è¿›å…¥æ—¶ï¼Œè¿›è¡Œä¸€äº›è®¡ç®—ï¼Œå¹¶å¯¹äºåŠ¨ä½œçš„å‘èµ·è€…å’Œæ¥å—è€…è¿›è¡Œå¤„ç†ï¼ˆæ¯”å¦‚ç¿»è½¬ï¼‰ï¼ˆå‡è®¾åŠ¨ä½œæˆåŠŸæ‰§è¡Œï¼‰ï¼Œä»¥åŠè®°å½•å½“å‰çš„åŠ¨ä½œ
+        ½øÈëÊ±£¬½øĞĞÒ»Ğ©¼ÆËã£¬²¢¶ÔÓÚ¶¯×÷µÄ·¢ÆğÕßºÍ½ÓÊÜÕß½øĞĞ´¦Àí£¨±ÈÈç·­×ª£©£¨¼ÙÉè¶¯×÷³É¹¦Ö´ĞĞ£©£¬ÒÔ¼°¼ÇÂ¼µ±Ç°µÄ¶¯×÷
         """
         self.this_reference = self.this_location.get_reference()
         self.original_pressed_direction = self.this_reference.pressed_direction
@@ -49,27 +49,27 @@ class BaseActionNode:
 
     def is_finished(self):
         """
-        åˆ¤æ–­è¿›è¡Œå½“å‰åŠ¨ä½œåæ˜¯å¦ç¡®å®šåŠ¨ä½œèƒ½å¤ŸæˆåŠŸå®Œæˆ
+        ÅĞ¶Ï½øĞĞµ±Ç°¶¯×÷ºóÊÇ·ñÈ·¶¨¶¯×÷ÄÜ¹»³É¹¦Íê³É
         """
         return False
 
     def expand(self):
         """
-        è¿”å›ä¸‹ä¸€æ­¥å¯èƒ½çš„åŠ¨ä½œ
+        ·µ»ØÏÂÒ»²½¿ÉÄÜµÄ¶¯×÷
         """
         return []
 
     def __exit__(self, *args):
         """
-        é€€å‡ºæ—¶ï¼Œæ’¤é”€å¯¹äºåŠ¨ä½œçš„å‘èµ·è€…å’Œæ¥å—è€…çš„å¤„ç†ï¼Œå¹¶åˆ é™¤è®°å½•çš„åŠ¨ä½œ
+        ÍË³öÊ±£¬³·Ïú¶ÔÓÚ¶¯×÷µÄ·¢ÆğÕßºÍ½ÓÊÜÕßµÄ´¦Àí£¬²¢É¾³ı¼ÇÂ¼µÄ¶¯×÷
         """
         for _ in range(self.record_count):
             self.record_stack.pop()
         self.this_reference.pressed_direction = self.original_pressed_direction
 
 class PushNode(BaseActionNode):
-    def __init__(self, this_location: Location, initiator_location: Optional[Location], direction: int,
-                 record_stack: list, is_first_movement: bool):
+    def __init__(self, this_location          , initiator_location                    , direction     ,
+                 record_stack      , is_first_movement      ):
         super().__init__(this_location, initiator_location, direction, record_stack, is_first_movement)
 
     def __enter__(self):
@@ -82,7 +82,7 @@ class PushNode(BaseActionNode):
         self.record_count = 1
 
     def is_finished(self):
-        return (self.original_pressed_direction is None and self.next_location is not None and self.next_location.get_type() == object_types.GROUND) or \
+        return (self.original_pressed_direction is None and self.next_location is not None and self.next_location.get_type() == object_types.GROUND) or\
                (self.original_pressed_direction == self.direction and self.next_location is not None and self.next_location.get_type() == object_types.REFERENCE)
 
     def expand(self):
@@ -96,7 +96,7 @@ class PushNode(BaseActionNode):
             return next_nodes
 
         new_direction = directions.reverse(self.direction) if self.next_location.is_relatively_flipped and directions.is_horizontal(self.direction) else self.direction
-        # å¦‚æœæ˜¯groundçš„è¯ï¼ŒæŒ‰ç†æ¥è¯´åº”è¯¥å·²ç»åœ¨åˆ¤æ–­pushçš„is_finishçš„æ—¶å€™æˆåŠŸå¹¶ä¸”è¿”å›è·¯å¾„äº†ï¼Œæ‰€ä»¥è¿™é‡Œä¸è€ƒè™‘ground
+        # Èç¹ûÊÇgroundµÄ»°£¬°´ÀíÀ´ËµÓ¦¸ÃÒÑ¾­ÔÚÅĞ¶ÏpushµÄis_finishµÄÊ±ºò³É¹¦²¢ÇÒ·µ»ØÂ·¾¶ÁË£¬ËùÒÔÕâÀï²»¿¼ÂÇground
         if next_location_type == object_types.REFERENCE:
             next_nodes.append(PushNode(self.next_location, self.this_location, new_direction, self.record_stack, False))
             if not self.next_reference.is_nonenterable():
@@ -114,8 +114,8 @@ class PushNode(BaseActionNode):
             self.this_reference.is_flipped ^= True
 
 class EnteredByNode(BaseActionNode):
-    def __init__(self, this_location: Location, initiator_location: Location, direction: int,
-                 record_stack: list, is_first_movement: bool, infenter_degree: int):
+    def __init__(self, this_location          , initiator_location          , direction     ,
+                 record_stack      , is_first_movement      , infenter_degree     ):
         super().__init__(this_location, initiator_location, direction, record_stack, is_first_movement)
         self.infenter_degree = infenter_degree
 
@@ -163,13 +163,13 @@ class EnteredByNode(BaseActionNode):
             next_nodes.append(PushNode(sanitised_enter_location, self.initiator_location, self.enterer_direction, self.record_stack, False))
             if not self.enter_reference.is_nonenterable():
                 if self.this_reference.room == self.enter_reference.room and self.this_location.offset == self.enter_location.offset:
-                    # æ£€æµ‹åˆ°æ— é™è¿›å…¥ï¼Œå°†è¢«è¿›å…¥çš„æˆ¿é—´æ›¿æ¢ä¸ºinfenter
+                    # ¼ì²âµ½ÎŞÏŞ½øÈë£¬½«±»½øÈëµÄ·¿¼äÌæ»»Îªinfenter
                     infenter = self.this_reference.get_infenter_reference(self.infenter_degree)
-                    infenter_location = Location(infenter.parent_room, infenter.pos, self.this_location.offset, infenter.is_flipped, (1 / infenter.room.width, 1 / infenter.room.height), infenter)  # å…¶å®æˆ‘ä¸¾å¾—è¿™é‡Œä¸åº”è¯¥å†™self.location.offsetï¼Œä½†æ˜¯åæ­£æ¸¸æˆé‡Œç¢°åˆ°çš„æ— é™è¿›å…¥çš„æ—¶å€™çš„offsetéƒ½æ˜¯0.5ï¼Œå…ˆæ‡’å¾—ç®¡è¿™é‡Œäº†
+                    infenter_location = Location(infenter.parent_room, infenter.pos, self.this_location.offset, infenter.is_flipped, (1 / infenter.room.width, 1 / infenter.room.height), infenter)  # ÆäÊµÎÒ¾ÙµÃÕâÀï²»Ó¦¸ÃĞ´self.location.offset£¬µ«ÊÇ·´ÕıÓÎÏ·ÀïÅöµ½µÄÎŞÏŞ½øÈëµÄÊ±ºòµÄoffset¶¼ÊÇ0.5£¬ÏÈÀÁµÃ¹ÜÕâÀïÁË
                     next_nodes.append(EnteredByNode(infenter_location, self.initiator_location, self.enterer_direction, self.record_stack,
                                       self.is_first_movement, self.infenter_degree + 1))
                 else:
-                    # æ­£å¸¸è¿›å…¥ï¼Œä¸æ˜¯æ— é™è¿›å…¥
+                    # Õı³£½øÈë£¬²»ÊÇÎŞÏŞ½øÈë
                     next_nodes.append(EnteredByNode(self.enter_location, self.initiator_location, self.enterer_direction, self.record_stack,
                                                     self.is_first_movement, self.infenter_degree))
             if not (self.initiator_reference.is_wall or self.initiator_reference.is_nonenterable()):
@@ -188,13 +188,13 @@ class EnteredByNode(BaseActionNode):
 
 class EatenByNode(BaseActionNode):
     """
-    eaterå‰è¿›ä¸€æ ¼ï¼Œè¢«åƒçš„referenceè¿›å…¥eater
-    å› ä¸ºeaterå‰è¿›ä¸€æ ¼è‚¯å®šæ˜¯è¢«pushçš„ï¼Œåœ¨recordstacké‡Œé¢å·²ç»æœ‰eaterçš„ç§»åŠ¨è®°å½•äº†ï¼Œæ‰€ä»¥è¿™é‡Œåªéœ€è¦è®°å½•è¢«åƒçš„referenceè¿›å…¥eaterçš„ç§»åŠ¨è®°å½•
+    eaterÇ°½øÒ»¸ñ£¬±»³ÔµÄreference½øÈëeater
+    ÒòÎªeaterÇ°½øÒ»¸ñ¿Ï¶¨ÊÇ±»pushµÄ£¬ÔÚrecordstackÀïÃæÒÑ¾­ÓĞeaterµÄÒÆ¶¯¼ÇÂ¼ÁË£¬ËùÒÔÕâÀïÖ»ĞèÒª¼ÇÂ¼±»³ÔµÄreference½øÈëeaterµÄÒÆ¶¯¼ÇÂ¼
     """
-    def __init__(self, this_location: Location, initiator_location: Optional[Location], direction: int,
-                 record_stack: list, is_first_movement: bool):
+    def __init__(self, this_location          , initiator_location                    , direction     ,
+                 record_stack      , is_first_movement      ):
         super().__init__(this_location, initiator_location, direction, record_stack, is_first_movement)
-        self.is_first_movement = False  # å› ä¸ºè¢«åƒçš„referenceä¸æ˜¯ç©å®¶ï¼Œæ‰€ä»¥eatäº†ä¹‹åä¸èƒ½possessï¼ˆè¿™é‡Œæš‚æ—¶ä¸è€ƒè™‘å¤šç©å®¶çš„æƒ…å†µï¼‰
+        self.is_first_movement = False  # ÒòÎª±»³ÔµÄreference²»ÊÇÍæ¼Ò£¬ËùÒÔeatÁËÖ®ºó²»ÄÜpossess£¨ÕâÀïÔİÊ±²»¿¼ÂÇ¶àÍæ¼ÒµÄÇé¿ö£©
 
     def __enter__(self):
         super().__enter__()
@@ -227,13 +227,13 @@ class EatenByNode(BaseActionNode):
         next_nodes.append(PushNode(sanitised_enter_location, self.this_location, self.enterer_direction, self.record_stack, False))
         if not self.enter_reference.is_nonenterable():
             if self.initiator_reference.room == self.enter_reference.room:
-                # æ£€æµ‹åˆ°æ— é™è¿›å…¥ï¼Œå°†è¢«è¿›å…¥çš„æˆ¿é—´æ›¿æ¢ä¸ºinfenter
+                # ¼ì²âµ½ÎŞÏŞ½øÈë£¬½«±»½øÈëµÄ·¿¼äÌæ»»Îªinfenter
                 if self.initiator_reference.is_infenter:
                     next_degree = self.initiator_reference.infenter_num + 1
                 else:
                     next_degree = 0
                 infenter = self.initiator_reference.get_infenter_reference(next_degree)
-                infenter_location = Location(infenter.parent_room, infenter.pos, self.this_location.offset, infenter.is_flipped, (1 / infenter.room.width, 1 / infenter.room.height), infenter)  # å…¶å®æˆ‘ä¸¾å¾—è¿™é‡Œä¸åº”è¯¥å†™self.location.offsetï¼Œä½†æ˜¯åæ­£æ¸¸æˆé‡Œç¢°åˆ°çš„æ— é™è¿›å…¥çš„æ—¶å€™çš„offsetéƒ½æ˜¯0.5ï¼Œå…ˆæ‡’å¾—ç®¡è¿™é‡Œäº†
+                infenter_location = Location(infenter.parent_room, infenter.pos, self.this_location.offset, infenter.is_flipped, (1 / infenter.room.width, 1 / infenter.room.height), infenter)  # ÆäÊµÎÒ¾ÙµÃÕâÀï²»Ó¦¸ÃĞ´self.location.offset£¬µ«ÊÇ·´ÕıÓÎÏ·ÀïÅöµ½µÄÎŞÏŞ½øÈëµÄÊ±ºòµÄoffset¶¼ÊÇ0.5£¬ÏÈÀÁµÃ¹ÜÕâÀïÁË
                 next_nodes.append(EnteredByNode(infenter_location, self.this_location, self.enterer_direction, self.record_stack, self.is_first_movement, next_degree + 1))
             else:
                 next_nodes.append(EnteredByNode(sanitised_enter_location, self.this_location, self.enterer_direction, self.record_stack, False, 0))
@@ -249,8 +249,8 @@ class EatenByNode(BaseActionNode):
 
 
 class PossessedByNode(BaseActionNode):
-    def __init__(self, this_location: Location, initiator_location: Optional[Location], direction: int,
-                 record_stack: list, is_first_movement: bool):
+    def __init__(self, this_location          , initiator_location                    , direction     ,
+                 record_stack      , is_first_movement      ):
         super().__init__(this_location, initiator_location, direction, record_stack, is_first_movement)
 
     def __enter__(self):
@@ -268,7 +268,7 @@ class PossessedByNode(BaseActionNode):
     def __exit__(self, *args):
         super().__exit__()
 
-def dfs(node: BaseActionNode):
+def dfs(node                ):
     with node:
         if node.is_finished():
             return node.record_stack.copy()
@@ -279,11 +279,11 @@ def dfs(node: BaseActionNode):
                 return result
         return None
 
-def conduct_record(records: list["Record"], players: dict[int, "Reference"], undo: undo_record.UndoRecord):
+def conduct_record(records                , players                        , undo                        ):
     records = records.copy()
 
-    # åˆå¹¶åŒä¸€ä¸ªreferenceè¿ç»­çš„ç§»åŠ¨è®°å½•
-    # è¿™é‡Œæ˜¯æŠŠè¿ç»­çš„enterç»™åˆå¹¶æ‰ï¼Œé¿å…åœ¨ä¸‹é¢æ‰¾ç¯çš„æ—¶å€™è¯¯æŠŠä¸¤ä¸ªè¿ç»­çš„enterå½“æˆæ˜¯åŒä¸€ä¸ªmovementè€Œå½“ä½œç¯å¤„ç†äº†
+    # ºÏ²¢Í¬Ò»¸öreferenceÁ¬ĞøµÄÒÆ¶¯¼ÇÂ¼
+    # ÕâÀïÊÇ°ÑÁ¬ĞøµÄenter¸øºÏ²¢µô£¬±ÜÃâÔÚÏÂÃæÕÒ»·µÄÊ±ºòÎó°ÑÁ½¸öÁ¬ĞøµÄenterµ±³ÉÊÇÍ¬Ò»¸ömovement¶øµ±×÷»·´¦ÀíÁË
     i = 1
     while i < len(records):
         if records[i].reference is records[i - 1].reference:
@@ -296,7 +296,7 @@ def conduct_record(records: list["Record"], players: dict[int, "Reference"], und
         else:
             i += 1
 
-    # å¯»æ‰¾å¯ä»¥ç§»åŠ¨çš„ç¯
+    # Ñ°ÕÒ¿ÉÒÔÒÆ¶¯µÄ»·
     if records.count(records[-1]) < 2:
         records = records
     else:
@@ -333,7 +333,7 @@ def conduct_record(records: list["Record"], players: dict[int, "Reference"], und
                 players[reference.playerorder] = reference
             reference.is_player = record.is_player
 
-def push(reference: "Reference", direction: int, players: dict[int, "Reference"], undo_record: undo_record.UndoRecord):
+def push(reference             , direction     , players                        , undo_record                        ):
     reference_location = Location(reference.parent_room, reference.pos)
     first_node = PushNode(reference_location, None, direction, [], True)
     record_stack = dfs(first_node)

@@ -10,20 +10,20 @@ except:
     pass
 
 class Location:
-    def __init__(self, room: "Room", pos: tuple[int, int], offset=0.5, is_flipped=False, relative_scale=(1, 1), reference: Optional["Reference"]=None):
+    def __init__(self, room        , pos                 , offset=0.5, is_flipped=False, relative_scale=(1, 1), reference                       =None):
         self.room = room
         self.pos = pos
 
         self.offset = offset
-        self.is_relatively_flipped = is_flipped  # ç›¸å¯¹äºç§»åŠ¨ä¸­çš„ä¸Šä¸€ä¸ªlocation
-        self.relative_scale = relative_scale  # ç›¸å¯¹äºç§»åŠ¨ä¸­çš„ä¸Šä¸€ä¸ªlocation
+        self.is_relatively_flipped = is_flipped  # Ïà¶ÔÓÚÒÆ¶¯ÖĞµÄÉÏÒ»¸ölocation
+        self.relative_scale = relative_scale  # Ïà¶ÔÓÚÒÆ¶¯ÖĞµÄÉÏÒ»¸ölocation
 
-        self.reference = reference  # ä¸“é—¨é’ˆå¯¹reference float_in_spaceçš„æƒ…å†µï¼Œè¿™ç§referenceæ ¹æœ¬å°±æ²¡æœ‰parent_roomï¼Œæ‰€ä»¥è¿™ä¸ªlocationé‡Œé¢çš„roomä¼šæ˜¯ç©ºçš„ï¼Œä¸èƒ½ä»roomçš„reference_mapé‡Œé¢å–reference
+        self.reference = reference  # ×¨ÃÅÕë¶Ôreference float_in_spaceµÄÇé¿ö£¬ÕâÖÖreference¸ù±¾¾ÍÃ»ÓĞparent_room£¬ËùÒÔÕâ¸ölocationÀïÃæµÄroom»áÊÇ¿ÕµÄ£¬²»ÄÜ´ÓroomµÄreference_mapÀïÃæÈ¡reference
 
     def __str__(self):
         return "{} {}".format(self.room, self.pos)
 
-    def __eq__(self, other: "Location"):
+    def __eq__(self, other            ):
         return self.room.id == other.room.id and self.pos == other.pos
 
     def __hash__(self):
@@ -33,19 +33,19 @@ class Location:
     def from_reference(cls, reference):
         return cls(reference.parent_room, reference.pos)
 
-    def get_sanitized_location(self) -> "Location":
+    def get_sanitized_location(self)              :
         """
-        è¿”å›ä¸€ä¸ªæ–°çš„åªåŒ…å«roomå’Œposçš„Locationï¼ˆå…¶ä»–çš„å€¼éƒ½æ˜¯é»˜è®¤å€¼ï¼‰
+        ·µ»ØÒ»¸öĞÂµÄÖ»°üº¬roomºÍposµÄLocation£¨ÆäËûµÄÖµ¶¼ÊÇÄ¬ÈÏÖµ£©
         """
         return Location(self.room, self.pos)
 
 
-    def is_reference(self) -> bool:
+    def is_reference(self)        :
         if self.room is None and self.reference is not None:
             return True
         return self.room.reference_map[self.pos[0]][self.pos[1]] is not None
 
-    def get_type(self) -> int:
+    def get_type(self)       :
         if self.room is None and self.reference is not None:
             if self.reference.is_wall:
                 return object_types.POSSESSABLE_WALL
@@ -65,25 +65,25 @@ class Location:
         else:
             return object_types.GROUND
 
-    def get_reference(self) -> Optional["Reference"]:
+    def get_reference(self)                         :
         if self.room is None and self.reference is not None:
             return self.reference
         return self.room.reference_map[self.pos[0]][self.pos[1]]
 
-    def get_next_location(self, direction: int, queried_directions: Optional[dict["Location", int]]=None) -> Optional['Location']:
+    def get_next_location(self, direction     , queried_directions                                 =None)                        :
         if self.room is None and self.reference is not None:
             return None
 
-        # å…ˆæ£€æŸ¥æ²¡æœ‰é€€å‡ºæ–¹å—çš„æƒ…å†µ
+        # ÏÈ¼ì²éÃ»ÓĞÍË³ö·½¿éµÄÇé¿ö
         next_pos = directions.next_pos(self.pos, direction)
         if self.room.is_in_bound(next_pos):
             return Location(self.room, next_pos, self.offset, self.is_relatively_flipped, self.relative_scale)
 
-        # å¦‚æœæ— æ³•é€€å‡ºæ–¹å—å°±è¿”å›None
+        # Èç¹ûÎŞ·¨ÍË³ö·½¿é¾Í·µ»ØNone
         elif self.room.exit_reference is None:
             return None
 
-        # å‡†å¤‡é€€å‡ºexit_referenceï¼Œè®¡ç®—æ‰€éœ€çš„å„é¡¹å‚æ•°
+        # ×¼±¸ÍË³öexit_reference£¬¼ÆËãËùĞèµÄ¸÷Ïî²ÎÊı
         exit_reference = self.room.exit_reference
         if queried_directions is None:
             queried_directions = {}
@@ -92,7 +92,7 @@ class Location:
             direction) else direction
         new_scale = (self.relative_scale[0] * self.room.width, self.relative_scale[1] * self.room.height)
 
-        # è®¡ç®—ç¦»å¼€exit_referenceåçš„æ–°offset
+        # ¼ÆËãÀë¿ªexit_referenceºóµÄĞÂoffset
         if direction == directions.UP or direction == directions.DOWN:
             new_offset = (self.pos[0] + self.offset) / self.room.width
         else:
@@ -100,12 +100,12 @@ class Location:
         if exit_reference.is_flipped and directions.is_vertical(direction):
             new_offset = 1 - new_offset
 
-        # è®¡ç®—exit_referenceçš„location
+        # ¼ÆËãexit_referenceµÄlocation
         exit_reference_location = Location(exit_reference.parent_room, exit_reference.pos, new_offset, self.is_relatively_flipped ^ exit_reference.is_flipped, new_scale)
 
-        # æ£€æŸ¥æ˜¯å¦å½¢æˆæ— é™é€€å‡º
+        # ¼ì²éÊÇ·ñĞÎ³ÉÎŞÏŞÍË³ö
         if queried_directions.get(exit_reference_location, None) == new_direction:
-            # è§¦å‘äº†æ— é™é€€å‡ºï¼Œè¿”å›infexitçš„get_next_location
+            # ´¥·¢ÁËÎŞÏŞÍË³ö£¬·µ»ØinfexitµÄget_next_location
             this_reference = self.get_reference()
             if this_reference.is_infexit:
                 next_degree = this_reference.infexit_num + 1
@@ -116,5 +116,5 @@ class Location:
             new_location = Location(infexit.parent_room, infexit.pos, new_offset, infexit.is_flipped, new_scale)
             return new_location.get_next_location(new_direction, queried_directions)
 
-        # ä»exit_reference_locationå‡ºå‘ï¼Œå¯»æ‰¾ä¸‹ä¸€ä¸ªæ–¹å—
+        # ´Óexit_reference_location³ö·¢£¬Ñ°ÕÒÏÂÒ»¸ö·½¿é
         return exit_reference_location.get_next_location(new_direction, queried_directions)

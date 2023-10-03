@@ -1,4 +1,9 @@
-# import reference
+try:
+    from typing import Optional, TYPE_CHECKING
+    if TYPE_CHECKING:
+        import movement
+except:
+    pass
 
 MAX_ENTRIES = 1000
 
@@ -23,8 +28,7 @@ class UndoRecord:
             self.movements.append(movement)
 
         @classmethod
-        # def from_move_records(cls, move_records: list[reference.Reference.MoveRecord]):
-        def from_move_records(cls, move_records):
+        def from_move_records(cls, move_records                         ):
             record = cls()
             for move_record in move_records:
                 reference = move_record.reference

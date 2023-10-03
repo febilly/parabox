@@ -498,33 +498,7 @@ class Reference:
             tracker.move_possess(self.MoveRecord(self, self.parent_room, self.pos, False, True))
             return True
 
-        enter_pos = directions.enter_pos(direction, self.room.width, self.room.height, self.is_flipped, outer_offset)
-        enter_obj = self.room.get(enter_pos)
-        if not isinstance(enter_obj, Reference):
-            return False
-        if enter_obj == self and enter_pos == self.pos:
-            return False
-
-        # enterer_direction is the direction that the enterer will go after entering
-        if self.is_flipped:
-            if directions.is_vertical(direction):
-                enterer_direction = direction
-                inner_offset = 1 - outer_offset
-            else:
-                enterer_direction = directions.reverse(direction)
-                inner_offset = outer_offset
-        else:
-            enterer_direction = direction
-            inner_offset = outer_offset
-
-        # this is part of the preparation for the recursion
-        # we move this part here because we need the enterer_direction to decide whether we need to do an early return
-        if directions.is_vertical(direction):
-            new_offset = inner_offset * self.room.width - enter_obj.pos[0]
-        else:
-            new_offset = inner_offset * self.room.height - enter_obj.pos[1]
-
-        return enter_obj._possessed_by(ghost_holder, enterer_direction, tracker, new_offset)
+        return False
 
 
     def possessed_by(self, ghost_holder: "Reference", direction: int, _undo_record: undo_record.UndoRecord, dry_run=False):
@@ -543,7 +517,7 @@ class Reference:
 
 
     def render(self, virtual_graphic: VirtualGraphic, area: tuple[tuple[int, int], tuple[int, int]],
-               render_as_flipped: bool = False):
+               parent_room_wall_color_int, render_as_flipped: bool = False):
         """
         area: (left_bottom, right_top), both are (x, y)
         """
@@ -552,8 +526,7 @@ class Reference:
             self.room.render(virtual_graphic, area, render_as_flipped ^ self.is_flipped)
             virtual_graphic.draw_empty_box_area(area, 0)
         else:
-            wall_color_int = utils.Color.hsv_to_rgb_int(*self.room.color)
-            virtual_graphic.draw_filled_box_area(area, wall_color_int)
+            virtual_graphic.draw_filled_box_area(area, parent_room_wall_color_int)
 
         if self.is_player:
             virtual_graphic.draw_tile_area("Player", area)

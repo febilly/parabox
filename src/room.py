@@ -96,7 +96,7 @@ class Room:
                             virtual_graphic.draw_filled_box_area(inner_area, wall_color_int)
                         elif self.reference_map[x][y] is not None:
                             inner_reference = self.reference_map[x][y]
-                            inner_reference.render(virtual_graphic, inner_area, render_as_flipped)
+                            inner_reference.render(virtual_graphic, inner_area, wall_color_int, render_as_flipped)
 
             for button in self.buttons:
                 render_x = self.width - button.pos[0] - 1 if render_as_flipped else button.pos[0]
