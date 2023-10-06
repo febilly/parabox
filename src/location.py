@@ -18,7 +18,7 @@ class Location:
         self.is_relatively_flipped = is_flipped  # 相对于移动中的上一个location
         self.relative_scale = relative_scale  # 相对于移动中的上一个location
 
-        self.reference = reference  # 专门针对reference float_in_space的情况，这种reference根本就没有parent_room，所以这个location里面的room会是空的，不能从room的reference_map里面取reference
+        self.reference = reference  # 万一room是None的话，就只能从这里获取reference了
 
     def __str__(self):
         return "{} {}".format(self.room, self.pos)
@@ -30,8 +30,8 @@ class Location:
         return hash((self.room.id, self.pos))
 
     @classmethod
-    def from_reference(cls, reference):
-        return cls(reference.parent_room, reference.pos)
+    def from_reference(cls, reference, offset=0.5, is_flipped=False, relative_scale=(1, 1)):
+        return cls(reference.parent_room, reference.pos, offset, is_flipped, relative_scale, reference)
 
     def get_sanitized_location(self) -> "Location":
         """
@@ -101,7 +101,7 @@ class Location:
             new_offset = 1 - new_offset
 
         # 计算exit_reference的location
-        exit_reference_location = Location(exit_reference.parent_room, exit_reference.pos, new_offset, self.is_relatively_flipped ^ exit_reference.is_flipped, new_scale)
+        exit_reference_location = self.from_reference(exit_reference, new_offset, self.is_relatively_flipped ^ exit_reference.is_flipped, new_scale)
 
         # 检查是否形成无限退出
         if queried_directions.get(exit_reference_location, None) == new_direction:
