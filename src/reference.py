@@ -3,11 +3,14 @@ import directions
 import object_types
 import undo_record
 import utils
-from virtual_graphic import VirtualGraphic
+from canvas import Canvas
 from location import Location
 
 try:
-    from typing import Optional
+    from typing import Optional, TYPE_CHECKING
+    if TYPE_CHECKING:
+        from level import Level
+        from room import Room
 except:
     pass
 
@@ -516,29 +519,29 @@ class Reference:
         return result
 
 
-    def render(self, virtual_graphic: VirtualGraphic, area: tuple[tuple[int, int], tuple[int, int]],
-               parent_room_wall_color_int, render_as_flipped: bool = False):
+    def render(self, canvas: Canvas, area: tuple[tuple[int, int], tuple[int, int]],
+               parent_room_wall_color_int, render_as_flipped: bool, not_block_until_room: Optional["Room"]):
         """
         area: (left_bottom, right_top), both are (x, y)
         """
 
         if not self.is_wall:
-            self.room.render(virtual_graphic, area, render_as_flipped ^ self.is_flipped)
-            virtual_graphic.draw_empty_box_area(area, 0)
+            self.room.render(canvas, area, render_as_flipped ^ self.is_flipped, not_block_until_room)
+            canvas.draw_empty_box_area(area, 0)
         else:
-            virtual_graphic.draw_filled_box_area(area, parent_room_wall_color_int)
+            canvas.draw_filled_box_area(area, parent_room_wall_color_int)
 
         if self.is_player:
-            virtual_graphic.draw_tile_area("Player", area)
+            canvas.draw_tile_area("Player", area)
         if self.is_possessable and not self.is_player:
-            virtual_graphic.draw_tile_area("Possessable", area)
+            canvas.draw_tile_area("Possessable", area)
         if self.is_infexit:
-            virtual_graphic.draw_filled_box_area(area, 0xa0000000)
-            virtual_graphic.draw_tile_area("Infinity", area)
+            canvas.draw_filled_box_area(area, 0xa0000000)
+            canvas.draw_tile_area("Infinity", area)
         if self.is_infenter:
-            virtual_graphic.draw_tile_area("Epsilon", area)
+            canvas.draw_tile_area("Epsilon", area)
 
         if not (self.is_exit_block or self.is_infexit):
-            virtual_graphic.draw_filled_box_area(area, 0x80ffffff, 0)
+            canvas.draw_filled_box_area(area, 0x80ffffff, 0)
         if self.is_nonenterable() and not self.is_player:
-            virtual_graphic.draw_empty_box_area(area, 0xffe700)
+            canvas.draw_empty_box_area(area, 0xffe700)

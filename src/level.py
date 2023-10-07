@@ -1,4 +1,4 @@
-from virtual_graphic import VirtualGraphic
+from canvas import Canvas
 from room import Room
 from reference import Reference
 import hpprime
@@ -324,7 +324,7 @@ class Level:
         assign()
 
 
-    def get_render_location(self, room: Optional[Room] = None, basic_size: tuple[int, int] = (200, 200)) -> tuple[Room, tuple[int, int], tuple[float, float]]:
+    def get_render_location(self, room: Optional[Room] = None, basic_size: tuple[int, int] = (200, 200)) -> tuple[Room, tuple[int, int], tuple[float, float], False]:
         """
         找到一个能够把屏幕填满的渲染对象
         """
@@ -332,11 +332,13 @@ class Level:
             player_to_focus = self.players[0]
             room = player_to_focus.parent_room
             if room is None:
-                return player_to_focus.room, (200, 200), (0.5, 0.5)
+                return player_to_focus.room, (200, 200), (0.5, 0.5), False
         # 这里的room是处于屏幕中间的room
         center = (0.5, 0.5)  # 这里的坐标系还是上为y+，右为x+
         size = basic_size
+        is_flipped = False
 
+        queried_rooms = set()
         sides = {directions.UP, directions.LEFT, directions.DOWN, directions.RIGHT}
         while sides:
             if room.exit_reference is None or room.exit_reference.parent_room is None:
@@ -344,36 +346,42 @@ class Level:
             exit_reference = room.exit_reference
             pos = exit_reference.pos
             new_room = exit_reference.parent_room
-            center = ((center[0] + pos[0]) / new_room.width,
-                      (center[1] + pos[1]) / new_room.height)
-
-            if pos[1] == new_room.height - 1:
-                sides.discard(directions.UP)
-            if pos[0] == 0:
-                sides.discard(directions.LEFT)
-            if pos[1] == 0:
-                sides.discard(directions.DOWN)
-            if pos[0] == new_room.width - 1:
-                sides.discard(directions.RIGHT)
+            if new_room in queried_rooms:
+                break
 
             size = (size[0] * new_room.width,
                     size[1] * new_room.height)
+            center = ((center[0] + pos[0]) / new_room.width,
+                      (center[1] + pos[1]) / new_room.height)
+            is_flipped ^= exit_reference.is_flipped
+
+            if pos[1] < new_room.height - 1:
+                sides.discard(directions.UP)
+            if pos[0] > 0:
+                sides.discard(directions.LEFT)
+            if pos[1] > 0:
+                sides.discard(directions.DOWN)
+            if pos[0] < new_room.width - 1:
+                sides.discard(directions.RIGHT)
+
+            queried_rooms.add(new_room)
             room = new_room
 
-        return room, size, center
+        return room, size, center, is_flipped
 
     def render(self, base_graphic, reference=None, size: tuple[int, int] = (200, 200)):
         player_to_focus = self.players[0]
-        render_room, object_size, render_center = self.get_render_location(reference, size)
+        render_room, object_size, render_center, is_flipped = self.get_render_location(reference, size)
         screen_size = (320, 240)
         screen_center = (screen_size[0] / 2, screen_size[1] / 2)
 
-        render_top_left = (screen_center[0] - object_size[0] * render_center[0],
-                           screen_center[1] - object_size[1] * (1 - render_center[1]))  # 屏幕的坐标系是下为y+，右为x+
+        render_top_left = (int(screen_center[0] - object_size[0] * render_center[0] + 0.001),
+                           int(screen_center[1] - object_size[1] * (1 - render_center[1]) + 0.001))  # 屏幕的坐标系是下为y+，右为x+
+        render_bottom_right = (render_top_left[0] + object_size[0], render_top_left[1] + object_size[1])
 
         hpprime.dimgrob(base_graphic, 320, 240, 0)
-        virtual_graphic = VirtualGraphic(base_graphic, render_top_left[0], render_top_left[1], object_size[0], object_size[1])
-        render_room.render(virtual_graphic, ((0, 0), (object_size[0] - 1, object_size[1] - 1)), player_to_focus.is_view_flipped)
+        canvas = Canvas(base_graphic)
+        render_room.render(canvas, (render_top_left, render_bottom_right), player_to_focus.is_view_flipped ^ is_flipped, player_to_focus.parent_room)
 
         hpprime.blit(0, 0, 0, base_graphic)
 

@@ -5,10 +5,11 @@ import directions
 from level import Level
 from palettes import Palettes
 from tileset import Tileset
+from control import get_input
 
-RENDER = False
+RENDER = True
 
-Tileset().init(2, 9, 64, 64)
+Tileset().init(2, 9)
 Palettes().init()
 
 def test_level(level: Level, solution: str):
@@ -29,6 +30,7 @@ def test_level(level: Level, solution: str):
                 direction = directions.LEFT
 
         level.push_players(direction, level.undo_record, RENDER, 0)
+    get_input(False)
     return level.is_completed()
 
 # 获取当前目录下所有以.gz结尾的文件

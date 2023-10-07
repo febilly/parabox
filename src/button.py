@@ -1,5 +1,5 @@
 import reference
-from virtual_graphic import VirtualGraphic
+from canvas import Canvas
 
 BUTTON = 1
 PLAYER_BUTTON = 2
@@ -23,7 +23,7 @@ class Button:
             return True
 
     def render(self, area: tuple[tuple[int, int], tuple[int, int]],
-               virtual_graphic: VirtualGraphic, reference_map: list[list[reference.Reference]]):
+               canvas: Canvas, reference_map: list[list[reference.Reference]]):
         if reference_map[self.pos[0]][self.pos[1]] is None:
             if self.type == BUTTON:
                 type = "Button"
@@ -35,9 +35,9 @@ class Button:
                 type = "Info"
             else:
                 raise Exception("Unknown button type: {}".format(self.type))
-            virtual_graphic.draw_tile_area(type, area)
+            canvas.draw_tile_area(type, area)
         elif self.is_done(reference_map):
-            virtual_graphic.draw_empty_box_area(area, 0xffffff)
+            canvas.draw_empty_box_area(area, 0xffffff)
 
    
 
