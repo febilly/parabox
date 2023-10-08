@@ -7,7 +7,7 @@ import tkinter as tk
 
 LOGGING = False
 SCREEN_SIZE = (320, 240)
-SCALE = False
+SCALE = True
 SCALE_FACTOR = 3
 INTERPOLATION = True
 

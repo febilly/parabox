@@ -328,11 +328,15 @@ class Level:
         """
         找到一个能够把屏幕填满的渲染对象
         """
+        flip = False
         if room is None:
             player_to_focus = self.players[0]
             room = player_to_focus.parent_room
             if room is None:
                 return player_to_focus.room, (200, 200), (0.5, 0.5), False
+            if player_to_focus.is_view_flipped:
+                flip = True
+
         # 这里的room是处于屏幕中间的room
         center = (0.5, 0.5)  # 这里的坐标系还是上为y+，右为x+
         size = basic_size
@@ -351,9 +355,14 @@ class Level:
 
             size = (size[0] * new_room.width,
                     size[1] * new_room.height)
-            center = ((center[0] + pos[0]) / new_room.width,
-                      (center[1] + pos[1]) / new_room.height)
-            is_flipped ^= exit_reference.is_flipped
+            if flip ^ exit_reference.is_flipped:
+                is_flipped ^= True
+                center = ((center[0] + new_room.width - pos[0] - 1) / new_room.width,
+                          (center[1] + pos[1]) / new_room.height)
+            else:
+                center = ((center[0] + pos[0]) / new_room.width,
+                          (center[1] + pos[1]) / new_room.height)
+            flip = False
 
             if pos[1] < new_room.height - 1:
                 sides.discard(directions.UP)
@@ -381,7 +390,8 @@ class Level:
 
         hpprime.dimgrob(base_graphic, 320, 240, 0)
         canvas = Canvas(base_graphic)
-        render_room.render(canvas, (render_top_left, render_bottom_right), player_to_focus.is_view_flipped ^ is_flipped, player_to_focus.parent_room)
+        # render_room.render(canvas, (render_top_left, render_bottom_right), player_to_focus.is_view_flipped ^ is_flipped, player_to_focus.parent_room)
+        render_room.render(canvas, (render_top_left, render_bottom_right), is_flipped, player_to_focus.parent_room)
 
         hpprime.blit(0, 0, 0, base_graphic)
 
