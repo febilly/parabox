@@ -73,6 +73,7 @@ class Level:
                 return False
             elif args[0] == "custom_level_palette":
                 self.palette_index = int(args[1])
+                return True
             elif args[0] in ignored_args:
                 return True
             elif args[0] in unsupported_args:
