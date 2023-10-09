@@ -58,6 +58,7 @@ class Level:
         """
 
         def argify_line(line: str):
+            line = line.strip()
             line = line.replace("\t", "").replace("\n", "").replace("\r", "")
             args = line.split(" ")
             return args
