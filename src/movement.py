@@ -116,7 +116,7 @@ class PushNode(BaseActionNode):
 
     def __exit__(self, *args):
         super().__exit__()
-        if self.next_location.is_relatively_flipped:
+        if self.next_location is not None and self.next_location.is_relatively_flipped:
             self.this_reference.is_flipped ^= True
 
 class EnteredByNode(BaseActionNode):
