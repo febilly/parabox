@@ -1,5 +1,5 @@
 import utils
-from virtual_graphic import VirtualGraphic
+from canvas import Canvas
 import reference
 import object_types
 import button
@@ -16,7 +16,7 @@ class Room:
         self.id = id
         self.color = color  # (hue, saturation, value)
         self.fill_with_blocks = fill_with_blocks
-        self.not_block = not_block  # to make the root room render even if it is surrounded by walls
+        self.not_block = not_block  # to make the room render even if it is surrounded by walls
         self.is_void = is_void
         self.is_root_room = False
         self.static_is_surrounded = None
@@ -62,8 +62,8 @@ class Room:
             self.static_is_surrounded = self.is_surrounded()
         return self.static_is_surrounded
 
-    def render(self, virtual_graphic                , area                                         ,
-               render_as_flipped       = False):
+    def render(self, canvas        , area                                         ,
+               render_as_flipped      ):
         """
         area: (left_bottom, right_top), both are (x, y)
         """
@@ -75,40 +75,40 @@ class Room:
             return
         elif size[0] <= 5 or size[1] <= 5:
             ground_color = self.color[:2] + (self.color[2] * (0.45 + 0.55 * self.is_surrounded_by_wall()),)
-            virtual_graphic.draw_filled_box_area(area, utils.Color.hsv_to_rgb_int(*ground_color), 0)
+            canvas.draw_filled_box_area(area, utils.Color.hsv_to_rgb_int(*ground_color), 0)
             return
 
         wall_color_int = utils.Color.hsv_to_rgb_int(*self.color)
 
         if self.fill_with_blocks or (not self.not_block and self.is_surrounded_by_wall()):
-            virtual_graphic.draw_filled_box_area(area, wall_color_int, 0)
+            canvas.draw_filled_box_area(area, wall_color_int, 0)
         else:
             ground_color = self.color[:2] + (self.color[2] * 0.45,)
-            virtual_graphic.draw_filled_box_area(area, utils.Color.hsv_to_rgb_int(*ground_color), 0)
+            canvas.draw_filled_box_area(area, utils.Color.hsv_to_rgb_int(*ground_color), 0)
             for x in range(self.width):
                 for y in range(self.height):
                     render_x = self.width - x - 1 if render_as_flipped else x
                     render_y = y
                     inner_area = self.sub_area(area, render_x, self.height - render_y - 1)
 
-                    if virtual_graphic.is_area_visible(inner_area):
+                    if canvas.is_area_visible(inner_area):
                         if self.wall_map[x][y]:
-                            virtual_graphic.draw_filled_box_area(inner_area, wall_color_int)
+                            canvas.draw_filled_box_area(inner_area, wall_color_int)
                         elif self.reference_map[x][y] is not None:
                             inner_reference = self.reference_map[x][y]
-                            inner_reference.render(virtual_graphic, inner_area, wall_color_int, render_as_flipped)
+                            inner_reference.render(canvas, inner_area, wall_color_int, render_as_flipped)
 
             for button in self.buttons:
                 render_x = self.width - button.pos[0] - 1 if render_as_flipped else button.pos[0]
                 render_y = button.pos[1]
                 inner_area = self.sub_area(area, render_x, self.height - render_y - 1)
-                if virtual_graphic.is_area_visible(inner_area):
-                    button.render(inner_area, virtual_graphic, self.reference_map)
+                if canvas.is_area_visible(inner_area):
+                    button.render(inner_area, canvas, self.reference_map)
 
             if self.exit_reference is None or not self.exit_reference.is_nonenterable():
-                virtual_graphic.draw_empty_box_area(area, 0)
+                canvas.draw_empty_box_area(area, 0)
             else:
-                virtual_graphic.draw_empty_box_area(area, 0xffe700)
+                canvas.draw_empty_box_area(area, 0xffe700)
 
     def is_in_bound(self, pos):
         return 0 <= pos[0] < self.width and 0 <= pos[1] < self.height

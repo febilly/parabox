@@ -12,12 +12,18 @@ try:
 except:
     pass
 
+PUSH = 1
+ENTER = 2
+EAT = 3
+POSSESS = 4
+
 
 class Record:
-    def __init__(self, reference             , new_location          , is_player):
+    def __init__(self, reference             , new_location          , is_player, type):
         self.reference = reference
         self.new_location = new_location  # 使用new_location里面的room、pos和is_relatively_flipped（和已有的flipped异或）
         self.is_player = is_player
+        self.type = type
 
     def __eq__(self, other):
         return self.reference == other.reference
@@ -78,7 +84,7 @@ class PushNode(BaseActionNode):
         self.next_reference = self.next_location.get_reference() if self.next_location is not None else None
         if self.next_location is not None and self.next_location.is_relatively_flipped:
             self.this_reference.is_flipped ^= True
-        self.record_stack.append(Record(self.this_reference, self.next_location, None))
+        self.record_stack.append(Record(self.this_reference, self.next_location, None, PUSH))
         self.record_count = 1
 
     def is_finished(self):
@@ -141,7 +147,7 @@ class EnteredByNode(BaseActionNode):
         self.enter_location = Location(self.this_reference.room, enter_pos, new_offset, self.this_reference.is_flipped, (1 / self.this_reference.room.width, 1 / self.this_reference.room.height))
         self.enter_location_type = self.enter_location.get_type() if self.enter_location is not None else None
         self.enter_reference = self.enter_location.get_reference() if self.enter_location is not None else None
-        self.record_stack.append(Record(self.initiator_reference, self.enter_location, None))
+        self.record_stack.append(Record(self.initiator_reference, self.enter_location, None, ENTER))
         self.record_count = 1
 
     def is_finished(self):
@@ -210,7 +216,7 @@ class EatenByNode(BaseActionNode):
         self.enter_location = Location(self.initiator_reference.room, enter_pos, 0.5, self.initiator_reference.is_flipped, (1 / self.initiator_reference.room.width, 1 / self.initiator_reference.room.height))
         self.enter_location_type = self.enter_location.get_type() if self.enter_location is not None else None
         self.enter_reference = self.enter_location.get_reference() if self.enter_location is not None else None
-        self.record_stack.append(Record(self.this_reference, self.enter_location, None))
+        self.record_stack.append(Record(self.this_reference, self.enter_location, None, EAT))
         self.record_count = 1
 
     def is_finished(self):
@@ -255,8 +261,8 @@ class PossessedByNode(BaseActionNode):
 
     def __enter__(self):
         super().__enter__()
-        self.record_stack.append(Record(self.initiator_reference, location.Location.from_reference(self.initiator_reference), False))
-        self.record_stack.append(Record(self.this_reference, location.Location.from_reference(self.this_reference), True))
+        self.record_stack.append(Record(self.initiator_reference, location.Location.from_reference(self.initiator_reference), False, POSSESS))
+        self.record_stack.append(Record(self.this_reference, location.Location.from_reference(self.this_reference), True, POSSESS))
         self.record_count = 2
 
     def is_finished(self):
@@ -286,7 +292,7 @@ def conduct_record(records                , players                        , und
     # 这里是把连续的enter给合并掉，避免在下面找环的时候误把两个连续的enter当成是同一个movement而当作环处理了
     i = 1
     while i < len(records):
-        if records[i].reference is records[i - 1].reference:
+        if records[i].type == ENTER and records[i].reference is records[i - 1].reference:
             this_location = records[i].new_location
             last_location = records[i - 1].new_location
             this_location.is_relatively_flipped ^= last_location.is_relatively_flipped

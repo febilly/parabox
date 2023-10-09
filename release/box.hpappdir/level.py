@@ -1,4 +1,4 @@
-from virtual_graphic import VirtualGraphic
+from canvas import Canvas
 from room import Room
 from reference import Reference
 import hpprime
@@ -9,6 +9,7 @@ import button
 from undo_record import UndoRecord
 from palettes import Palettes
 import movement
+from location import Location
 
 try:
     from typing import Optional
@@ -297,6 +298,16 @@ class Level:
                     if infenter.is_exit_block:
                         infenter.room.exit_reference = infenter
 
+            # set room's not_block to True if it contains any references or buttons
+            for room in self.rooms.values():
+                if room.buttons:
+                    room.not_block = True
+                for x in range(room.width):
+                    for y in range(room.height):
+                        if room.reference_map[x][y] is not None:
+                            room.not_block = True
+                            break
+
             # remove float_in_space references from room.reference_map
             for room in self.rooms.values():
                 for x in range(room.width):
@@ -323,18 +334,74 @@ class Level:
         assign()
 
 
-    def render(self, base_graphic, room=None, size                  = (200, 200)):
-        player_to_focus = self.players[0]
+    def get_render_location(self, room                 = None, basic_size                  = (200, 200))                                                            :
+        """
+        找到一个能够把屏幕填满的渲染对象
+        """
+        flip = False
         if room is None:
+            player_to_focus = self.players[0]
             room = player_to_focus.parent_room
-        hpprime.dimgrob(base_graphic, 320, 240, 0)
+            if room is None:
+                return player_to_focus.room, (200, 200), (0.5, 0.5), False
+            if player_to_focus.is_view_flipped:
+                flip = True
 
-        render_center = ((320 - size[0]) // 2, (240 - size[1]) // 2)
-        for x in range(-1, 2):
-            for y in range(-1, 2):
-                render_pos = (render_center[0] + x * size[0], render_center[1] + y * size[1])
-                virtual_graphic = VirtualGraphic(base_graphic, render_pos[0], render_pos[1], size[0], size[1])
-                room.render(virtual_graphic, ((0, 0), (size[0] - 1, size[1] - 1)), player_to_focus.is_view_flipped)
+        # 这里的room是处于屏幕中间的room
+        center = (0.5, 0.5)  # 这里的坐标系还是上为y+，右为x+
+        size = basic_size
+        is_flipped = False
+
+        queried_rooms = set()
+        sides = {directions.UP, directions.LEFT, directions.DOWN, directions.RIGHT}
+        while sides:
+            if room.exit_reference is None or room.exit_reference.parent_room is None:
+                break
+            exit_reference = room.exit_reference
+            pos = exit_reference.pos
+            new_room = exit_reference.parent_room
+            if new_room in queried_rooms:
+                break
+
+            size = (size[0] * new_room.width,
+                    size[1] * new_room.height)
+            if flip ^ exit_reference.is_flipped:
+                is_flipped ^= True
+                center = ((center[0] + new_room.width - pos[0] - 1) / new_room.width,
+                          (center[1] + pos[1]) / new_room.height)
+            else:
+                center = ((center[0] + pos[0]) / new_room.width,
+                          (center[1] + pos[1]) / new_room.height)
+            flip = False
+
+            if pos[1] < new_room.height - 1:
+                sides.discard(directions.UP)
+            if pos[0] > 0:
+                sides.discard(directions.LEFT)
+            if pos[1] > 0:
+                sides.discard(directions.DOWN)
+            if pos[0] < new_room.width - 1:
+                sides.discard(directions.RIGHT)
+
+            queried_rooms.add(new_room)
+            room = new_room
+
+        return room, size, center, is_flipped
+
+    def render(self, base_graphic, reference=None, size                  = (200, 200)):
+        player_to_focus = self.players[0]
+        render_room, object_size, render_center, is_flipped = self.get_render_location(reference, size)
+        screen_size = (320, 240)
+        screen_center = (screen_size[0] / 2, screen_size[1] / 2)
+
+        render_top_left = (int(screen_center[0] - object_size[0] * render_center[0] + 0.001),
+                           int(screen_center[1] - object_size[1] * (1 - render_center[1]) + 0.001))  # 屏幕的坐标系是下为y+，右为x+
+        render_bottom_right = (render_top_left[0] + object_size[0], render_top_left[1] + object_size[1])
+
+        hpprime.dimgrob(base_graphic, 320, 240, 0)
+        canvas = Canvas(base_graphic)
+        # render_room.render(canvas, (render_top_left, render_bottom_right), player_to_focus.is_view_flipped ^ is_flipped, player_to_focus.parent_room)
+        render_room.render(canvas, (render_top_left, render_bottom_right), is_flipped)
 
         hpprime.blit(0, 0, 0, base_graphic)
 
