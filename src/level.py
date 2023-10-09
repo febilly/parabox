@@ -298,6 +298,16 @@ class Level:
                     if infenter.is_exit_block:
                         infenter.room.exit_reference = infenter
 
+            # set room's not_block to True if it contains any references or buttons
+            for room in self.rooms.values():
+                if room.buttons:
+                    room.not_block = True
+                for x in range(room.width):
+                    for y in range(room.height):
+                        if room.reference_map[x][y] is not None:
+                            room.not_block = True
+                            break
+
             # remove float_in_space references from room.reference_map
             for room in self.rooms.values():
                 for x in range(room.width):
@@ -391,7 +401,7 @@ class Level:
         hpprime.dimgrob(base_graphic, 320, 240, 0)
         canvas = Canvas(base_graphic)
         # render_room.render(canvas, (render_top_left, render_bottom_right), player_to_focus.is_view_flipped ^ is_flipped, player_to_focus.parent_room)
-        render_room.render(canvas, (render_top_left, render_bottom_right), is_flipped, player_to_focus.parent_room)
+        render_room.render(canvas, (render_top_left, render_bottom_right), is_flipped)
 
         hpprime.blit(0, 0, 0, base_graphic)
 

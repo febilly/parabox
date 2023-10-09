@@ -520,13 +520,13 @@ class Reference:
 
 
     def render(self, canvas: Canvas, area: tuple[tuple[int, int], tuple[int, int]],
-               parent_room_wall_color_int, render_as_flipped: bool, not_block_until_room: Optional["Room"]):
+               parent_room_wall_color_int, render_as_flipped: bool):
         """
         area: (left_bottom, right_top), both are (x, y)
         """
 
         if not self.is_wall:
-            self.room.render(canvas, area, render_as_flipped ^ self.is_flipped, not_block_until_room)
+            self.room.render(canvas, area, render_as_flipped ^ self.is_flipped)
             canvas.draw_empty_box_area(area, 0)
         else:
             canvas.draw_filled_box_area(area, parent_room_wall_color_int)

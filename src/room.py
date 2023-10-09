@@ -16,7 +16,7 @@ class Room:
         self.id = id
         self.color = color  # (hue, saturation, value)
         self.fill_with_blocks = fill_with_blocks
-        self.not_block = not_block  # to make the root room render even if it is surrounded by walls
+        self.not_block = not_block  # to make the room render even if it is surrounded by walls
         self.is_void = is_void
         self.is_root_room = False
         self.static_is_surrounded = None
@@ -63,7 +63,7 @@ class Room:
         return self.static_is_surrounded
 
     def render(self, canvas: Canvas, area: tuple[tuple[int, int], tuple[int, int]],
-               render_as_flipped: bool, not_block_until_room: Optional["Room"]):
+               render_as_flipped: bool):
         """
         area: (left_bottom, right_top), both are (x, y)
         """
@@ -80,11 +80,9 @@ class Room:
 
         wall_color_int = utils.Color.hsv_to_rgb_int(*self.color)
 
-        if (not_block_until_room is None) and (self.fill_with_blocks or (not self.not_block and self.is_surrounded_by_wall())):
+        if self.fill_with_blocks or (not self.not_block and self.is_surrounded_by_wall()):
             canvas.draw_filled_box_area(area, wall_color_int, 0)
         else:
-            if self is not_block_until_room:
-                not_block_until_room = None
             ground_color = self.color[:2] + (self.color[2] * 0.45,)
             canvas.draw_filled_box_area(area, utils.Color.hsv_to_rgb_int(*ground_color), 0)
             for x in range(self.width):
@@ -98,7 +96,7 @@ class Room:
                             canvas.draw_filled_box_area(inner_area, wall_color_int)
                         elif self.reference_map[x][y] is not None:
                             inner_reference = self.reference_map[x][y]
-                            inner_reference.render(canvas, inner_area, wall_color_int, render_as_flipped, not_block_until_room)
+                            inner_reference.render(canvas, inner_area, wall_color_int, render_as_flipped)
 
             for button in self.buttons:
                 render_x = self.width - button.pos[0] - 1 if render_as_flipped else button.pos[0]
