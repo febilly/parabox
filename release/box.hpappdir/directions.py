@@ -7,7 +7,7 @@ RIGHT = 4
 # ^
 # |
 # |
-# ©¸©¤©¤©¤> +x
+# â””â”€â”€â”€> +x
 
 def id_to_name(direction     )       :
     if direction == UP:

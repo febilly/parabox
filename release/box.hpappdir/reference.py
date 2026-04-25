@@ -40,9 +40,9 @@ class Reference:
         self.float_in_space = float_in_space
 
         self.is_infexit = is_infexit
-        self.infexit_num = infexit_num  # always 1 less than the number of displayed ¡Ş
+        self.infexit_num = infexit_num  # always 1 less than the number of displayed âˆ
         self.is_infenter = is_infenter
-        self.infenter_num = infenter_num  # always 1 less than the number of displayed ¦Å
+        self.infenter_num = infenter_num  # always 1 less than the number of displayed Îµ
 
         # self.infexit_to_references: dict[int, "Reference"] = {}  # degree -> reference
         self.infenter_from_id = infenter_from_id
